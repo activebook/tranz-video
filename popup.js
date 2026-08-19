@@ -10,6 +10,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   const targetLangSelect = document.getElementById('target-lang-select');
   const openOptionsBtn = document.getElementById('btn-open-options');
 
+  const versionBadge = document.querySelector('.popup-version');
+  if (versionBadge && chrome.runtime?.getManifest) {
+    versionBadge.innerText = `v${chrome.runtime.getManifest().version}`;
+  }
+
   // 1. Load active configuration from storage
   try {
     if (chrome.runtime?.id) {
