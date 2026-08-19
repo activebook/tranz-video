@@ -5,9 +5,12 @@ on:
     branches:
       - main
     paths-ignore:
+      - 'README.md'
+      - 'LICENSE'
       - 'images/**'
-      - '.github/workflows/jekyll-gh-pages.yml'
       - 'goal/**'
+      - '.github/workflows/jekyll-gh-pages.yml'
+      - '.gitignore'
   workflow_dispatch:
 
 permissions:
@@ -70,6 +73,9 @@ jobs:
             -x ".github/*" \
             -x "images/*" \
             -x "goal/*" \
+            -x "*.md" \
+            -x "LICENSE" \
+            -x ".gitignore" \
             -x "*.zip" \
             -x "*.DS_Store" \
             -x "scratch/*"
