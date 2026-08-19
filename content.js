@@ -105,10 +105,10 @@
           if (typeof geom.y === 'number' && geom.y >= 0 && geom.y < window.innerHeight - 60) {
             state.y = geom.y;
           }
-          if (typeof geom.width === 'number' && geom.width >= 320) {
+          if (typeof geom.width === 'number' && geom.width >= 260) {
             state.width = geom.width;
           }
-          if (typeof geom.height === 'number' && geom.height >= 220) {
+          if (typeof geom.height === 'number' && geom.height >= 100) {
             state.height = geom.height;
           }
           if (typeof geom.zoom === 'number' && geom.zoom >= 0.7 && geom.zoom <= 1.6) {
@@ -253,22 +253,20 @@
         <div class="tzv-header">
           <div class="tzv-header-left">
             <img src="${iconUrl}" class="tzv-logo-badge" alt="Tranz Video">
+            <div class="tzv-status-container">
+              <div class="tzv-status-dot" id="tzv-status-indicator"></div>
+              <span id="tzv-status-text">Ready</span>
+            </div>
           </div>
           <div class="tzv-header-right">
             <button class="tzv-btn-icon tzv-btn-icon-highlight" id="tzv-btn-translate-action" title="Translate Frame">⚡</button>
             <button class="tzv-btn-icon" id="tzv-btn-copy-all" title="Copy All">📋</button>
-            <button class="tzv-btn-icon" id="tzv-btn-close" title="Close">✕</button>
+            <button class="tzv-btn-icon" id="tzv-btn-close" title="Minimize Window">✕</button>
           </div>
         </div>
         <div class="tzv-body" id="tzv-body-content">
           <div class="tzv-loading-state" id="tzv-empty-state">
-            <p style="color: var(--tzv-text-muted); font-size: 13px;">Click ⚡ to translate active video frame.</p>
-          </div>
-        </div>
-        <div class="tzv-footer">
-          <div class="tzv-status-container">
-            <div class="tzv-status-dot" id="tzv-status-indicator"></div>
-            <span id="tzv-status-text">Ready</span>
+            <p style="color: var(--tzv-text-muted); font-size: 12.5px;">Click ⚡ to translate active video frame.</p>
           </div>
         </div>
         <div class="tzv-resize-handle" id="tzv-resize-handle"></div>
@@ -359,8 +357,8 @@
     // Corner resize
     const resizeHandle = windowEl.querySelector('#tzv-resize-handle');
     initResize(resizeHandle, (dw, dh) => {
-      state.width = Math.max(320, state.width + dw);
-      state.height = Math.max(200, state.height + dh);
+      state.width = Math.max(260, state.width + dw);
+      state.height = Math.max(100, state.height + dh);
       applyGeometry();
       persistState();
     });
