@@ -14,138 +14,265 @@
         <img src="icons/icon48.png" class="tzv-options-logo" alt="Tranz Video">
         <div>
           <h1 class="tzv-options-title">Tranz Video Settings</h1>
-          <p class="tzv-options-subtitle">On-Screen Web Video Text Translation & Language Learning</p>
+          <p class="tzv-options-subtitle">On-Screen Web Video Text Translation</p>
         </div>
       </div>
     </header>
 
+    <!-- Tab Navigation -->
+    <nav class="tzv-tabs-nav">
+      <button type="button" class="tzv-tab-btn tzv-tab-active" data-tab="ai">
+        <span>⚡</span>
+        <span>AI Service</span>
+      </button>
+      <button type="button" class="tzv-tab-btn" data-tab="appearance">
+        <span>🎨</span>
+        <span>Appearance</span>
+      </button>
+      <button type="button" class="tzv-tab-btn" data-tab="translation">
+        <span>🌐</span>
+        <span>Translation</span>
+      </button>
+    </nav>
+
     <form id="tzv-options-form">
-      <!-- Section 1: AI Service Endpoint -->
-      <section class="tzv-section">
-        <h2 class="tzv-section-title">
-          <span>⚡</span>
-          <span>AI Service Endpoint (OpenAI-Compatible)</span>
-        </h2>
+      <!-- TAB 1: AI Service -->
+      <div class="tzv-tab-pane tzv-tab-active" id="tab-pane-ai">
+        <section class="tzv-section">
+          <h2 class="tzv-section-title">
+            <span>⚡</span>
+            <span>AI Service Endpoint (OpenAI-Compatible)</span>
+          </h2>
 
-        <div class="tzv-grid-2">
-          <div class="tzv-form-group">
-            <label class="tzv-form-label" for="endpoint">API Base URL</label>
-            <input class="tzv-input" type="text" id="endpoint" name="endpoint" placeholder="http://127.0.0.1:8045/v1" required>
+          <div class="tzv-grid-2">
+            <div class="tzv-form-group">
+              <label class="tzv-form-label" for="endpoint">API Base URL</label>
+              <input class="tzv-input" type="text" id="endpoint" name="endpoint" placeholder="http://127.0.0.1:8045/v1" required>
+            </div>
+
+            <div class="tzv-form-group">
+              <label class="tzv-form-label" for="model">Model Identifier</label>
+              <input class="tzv-input" type="text" id="model" name="model" placeholder="gemini-2.5-flash-lite" required>
+            </div>
           </div>
 
-          <div class="tzv-form-group">
-            <label class="tzv-form-label" for="model">Model Identifier</label>
-            <input class="tzv-input" type="text" id="model" name="model" placeholder="gemini-2.5-flash-lite" required>
-          </div>
-        </div>
+          <div class="tzv-grid-2">
+            <div class="tzv-form-group">
+              <label class="tzv-form-label" for="apiKey">API Key (Optional for local gateway)</label>
+              <input class="tzv-input" type="password" id="apiKey" name="apiKey" placeholder="sk-...">
+            </div>
 
-        <div class="tzv-grid-2">
-          <div class="tzv-form-group">
-            <label class="tzv-form-label" for="apiKey">API Key (Optional for local gateway)</label>
-            <input class="tzv-input" type="password" id="apiKey" name="apiKey" placeholder="sk-...">
-          </div>
-
-          <div class="tzv-form-group">
-            <label class="tzv-form-label" for="temperature">Temperature (0.0 - 1.0)</label>
-            <input class="tzv-input" type="number" id="temperature" name="temperature" min="0" max="1" step="0.05" value="0.2">
-          </div>
-        </div>
-
-        <div class="tzv-test-row">
-          <button type="button" class="tzv-btn-secondary" id="btn-test-connection">Test API Connection</button>
-          <span id="test-connection-status" class="tzv-test-status"></span>
-        </div>
-      </section>
-
-      <!-- Section 2: Language & Pedagogical Mode -->
-      <section class="tzv-section">
-        <h2 class="tzv-section-title">
-          <span>🌐</span>
-          <span>Translation & Learning Preferences</span>
-        </h2>
-
-        <div class="tzv-grid-2">
-          <div class="tzv-form-group">
-            <label class="tzv-form-label" for="targetLanguage">Target Language</label>
-            <select class="tzv-select" id="targetLanguage" name="targetLanguage">
-              <option value="en">English (en)</option>
-              <option value="zh-Hans">Simplified Chinese (简体中文)</option>
-              <option value="zh-Hant">Traditional Chinese (繁體中文)</option>
-              <option value="ja">Japanese (日本語)</option>
-              <option value="ko">Korean (한국어)</option>
-              <option value="es">Spanish (Español)</option>
-              <option value="fr">French (Français)</option>
-            </select>
+            <div class="tzv-form-group">
+              <label class="tzv-form-label" for="temperature">Temperature (0.0 - 1.0)</label>
+              <input class="tzv-input" type="number" id="temperature" name="temperature" min="0" max="1" step="0.05" value="0.2">
+            </div>
           </div>
 
-          <div class="tzv-form-group">
-            <label class="tzv-form-label">Output Mode</label>
-            <div class="tzv-radio-group-compact">
-              <label class="tzv-radio-chip">
-                <input type="radio" name="learningMode" value="bilingual" checked>
-                <span>Bilingual Pair (Source + Target)</span>
-              </label>
-              <label class="tzv-radio-chip">
-                <input type="radio" name="learningMode" value="target_only">
-                <span>Target Only</span>
-              </label>
+          <div class="tzv-test-row">
+            <button type="button" class="tzv-btn-secondary" id="btn-test-connection">Test API Connection</button>
+            <span id="test-connection-status" class="tzv-test-status"></span>
+          </div>
+        </section>
+      </div>
+
+      <!-- TAB 2: Appearance -->
+      <div class="tzv-tab-pane" id="tab-pane-appearance">
+        <!-- Live Interactive Preview -->
+        <div class="tzv-preview-container">
+          <div class="tzv-preview-badge">
+            <span>●</span>
+            <span>Live Preview</span>
+          </div>
+          <div class="tzv-preview-window" id="tzv-preview-window">
+            <div class="tzv-header">
+              <div class="tzv-header-left">
+                <img src="icons/icon48.png" class="tzv-logo-badge" alt="Tranz Video">
+                <div class="tzv-status-container">
+                  <div class="tzv-status-dot"></div>
+                  <span>Ready</span>
+                </div>
+              </div>
+              <div class="tzv-header-right">
+                <button type="button" class="tzv-btn-icon tzv-btn-icon-highlight" title="Translate Frame">⚡</button>
+                <button type="button" class="tzv-btn-icon" title="Copy All">📋</button>
+                <button type="button" class="tzv-btn-icon" title="Minimize">✕</button>
+              </div>
+            </div>
+            <div class="tzv-body">
+              <div class="tzv-pairs-list">
+                <div class="tzv-pair-item">
+                  <div class="tzv-pair-source" id="preview-source-line">宿屋に泊まって体力を回復しますか？</div>
+                  <div class="tzv-pair-target" id="preview-target-line">Would you like to stay at the inn and restore health?</div>
+                </div>
+                <div class="tzv-pair-item">
+                  <div class="tzv-pair-source">▶ はい / いいえ</div>
+                  <div class="tzv-pair-target">▶ Yes / No</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      </section>
 
-      <!-- Section 3: General & Player Behavior -->
-      <section class="tzv-section">
-        <h2 class="tzv-section-title">
-          <span>⚙️</span>
-          <span>General & Player Behavior</span>
-        </h2>
+        <!-- Window Style & Effects -->
+        <section class="tzv-section">
+          <h2 class="tzv-section-title">
+            <span>🪟</span>
+            <span>Window Style & Effect</span>
+          </h2>
 
-        <div class="tzv-form-group" style="gap: 8px;">
-          <label class="tzv-checkbox-row">
-            <input type="checkbox" id="extensionEnabled" name="extensionEnabled" checked>
-            <span><strong>Enable Tranz Video extension</strong> (Show floating translation window on web videos)</span>
-          </label>
-
-          <label class="tzv-checkbox-row">
-            <input type="checkbox" id="autoPause" name="autoPause" checked>
-            <span>Automatically pause active video stream when initiating translation</span>
-          </label>
-        </div>
-      </section>
-
-      <!-- Section 4: Collapsible Prompt Orchestration (Advanced) -->
-      <details class="tzv-details">
-        <summary class="tzv-summary">
-          <div class="tzv-summary-title">
-            <span>📝</span>
-            <span>Advanced Prompt Configuration</span>
+          <div class="tzv-form-group">
+            <label class="tzv-form-label">Visual Style Effect</label>
+            <div class="tzv-radio-group-compact">
+              <label class="tzv-radio-chip">
+                <input type="radio" name="hudEffect" value="translucent" checked>
+                <span>Translucent</span>
+              </label>
+              <label class="tzv-radio-chip">
+                <input type="radio" name="hudEffect" value="glassmorphism">
+                <span>Frosted Glass</span>
+              </label>
+              <label class="tzv-radio-chip">
+                <input type="radio" name="hudEffect" value="opaque">
+                <span>Opaque</span>
+              </label>
+              <label class="tzv-radio-chip">
+                <input type="radio" name="hudEffect" value="transparent_glow">
+                <span>Glow</span>
+              </label>
+            </div>
           </div>
-          <span class="tzv-summary-sub">Customize system and user prompt templates</span>
-        </summary>
 
-        <div class="tzv-details-content">
+          <div class="tzv-grid-2">
+            <div class="tzv-form-group">
+              <label class="tzv-form-label" for="hudBgColor">Background Color</label>
+              <div class="tzv-color-input-wrap">
+                <input type="color" class="tzv-color-picker" id="hudBgColor" name="hudBgColor" value="#0a0e16">
+                <span class="tzv-color-hex-text" id="hudBgColor-hex">#0A0E16</span>
+              </div>
+            </div>
+
+            <div class="tzv-form-group">
+              <label class="tzv-form-label" for="hudOpacity">Backdrop Opacity (%)</label>
+              <div class="tzv-range-wrap">
+                <input type="range" class="tzv-range-slider" id="hudOpacity" name="hudOpacity" min="10" max="100" step="1" value="88">
+                <span class="tzv-range-value" id="hudOpacity-val">88%</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Size & Text Colors -->
+        <section class="tzv-section">
+          <h2 class="tzv-section-title">
+            <span>🔤</span>
+            <span>Size & Colors</span>
+          </h2>
+
+          <div class="tzv-grid-2">
+            <div class="tzv-form-group">
+              <label class="tzv-form-label" for="sourceFontSize">Source Text Size (px)</label>
+              <div class="tzv-range-wrap">
+                <input type="range" class="tzv-range-slider" id="sourceFontSize" name="sourceFontSize" min="11" max="22" step="1" value="13">
+                <span class="tzv-range-value" id="sourceFontSize-val">13px</span>
+              </div>
+            </div>
+
+            <div class="tzv-form-group">
+              <label class="tzv-form-label" for="sourceColor">Source Text Color</label>
+              <div class="tzv-color-input-wrap">
+                <input type="color" class="tzv-color-picker" id="sourceColor" name="sourceColor" value="#38bdf8">
+                <span class="tzv-color-hex-text" id="sourceColor-hex">#38BDF8</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="tzv-grid-2">
+            <div class="tzv-form-group">
+              <label class="tzv-form-label" for="targetFontSize">Target Translation Size (px)</label>
+              <div class="tzv-range-wrap">
+                <input type="range" class="tzv-range-slider" id="targetFontSize" name="targetFontSize" min="12" max="26" step="1" value="14">
+                <span class="tzv-range-value" id="targetFontSize-val">14px</span>
+              </div>
+            </div>
+
+            <div class="tzv-form-group">
+              <label class="tzv-form-label" for="targetColor">Target Translation Color</label>
+              <div class="tzv-color-input-wrap">
+                <input type="color" class="tzv-color-picker" id="targetColor" name="targetColor" value="#ffffff">
+                <span class="tzv-color-hex-text" id="targetColor-hex">#FFFFFF</span>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- TAB 3: Translation -->
+      <div class="tzv-tab-pane" id="tab-pane-translation">
+        <!-- Translation Preferences -->
+        <section class="tzv-section">
+          <h2 class="tzv-section-title">
+            <span>🌐</span>
+            <span>Translation Preferences</span>
+          </h2>
+
+          <div class="tzv-grid-2">
+            <div class="tzv-form-group">
+              <label class="tzv-form-label" for="targetLanguage">Target Language</label>
+              <select class="tzv-select" id="targetLanguage" name="targetLanguage">
+                <option value="en">English (en)</option>
+                <option value="zh-Hans">Simplified Chinese (简体中文)</option>
+                <option value="zh-Hant">Traditional Chinese (繁體中文)</option>
+                <option value="ja">Japanese (日本語)</option>
+                <option value="ko">Korean (한국어)</option>
+                <option value="es">Spanish (Español)</option>
+                <option value="fr">French (Français)</option>
+              </select>
+            </div>
+
+            <div class="tzv-form-group">
+              <label class="tzv-form-label">Output Mode</label>
+              <div class="tzv-radio-group-compact">
+                <label class="tzv-radio-chip">
+                  <input type="radio" name="learningMode" value="bilingual" checked>
+                  <span>Bilingual Pair</span>
+                </label>
+                <label class="tzv-radio-chip">
+                  <input type="radio" name="learningMode" value="target_only">
+                  <span>Target Only</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Prompt Orchestration -->
+        <section class="tzv-section">
+          <h2 class="tzv-section-title">
+            <span>📝</span>
+            <span>Prompt Orchestration</span>
+          </h2>
+
           <div class="tzv-form-group">
             <label class="tzv-form-label" for="systemPrompt">System Prompt</label>
-            <textarea class="tzv-textarea" id="systemPrompt" name="systemPrompt" rows="3"></textarea>
+            <textarea class="tzv-textarea" id="systemPrompt" name="systemPrompt" rows="4"></textarea>
           </div>
 
           <div class="tzv-form-group">
             <label class="tzv-form-label" for="userPromptTemplate">User Prompt Template</label>
-            <textarea class="tzv-textarea" id="userPromptTemplate" name="userPromptTemplate" rows="2"></textarea>
-            <span class="tzv-form-hint">Placeholders: <code>{TARGET_LANGUAGE}</code>, <code>{MODE_INSTRUCTIONS}</code></span>
+            <textarea class="tzv-textarea" id="userPromptTemplate" name="userPromptTemplate" rows="3"></textarea>
+            <span class="tzv-form-hint">Available template tags: <code>{TARGET_LANGUAGE}</code>, <code>{MODE_INSTRUCTIONS}</code></span>
           </div>
-        </div>
-      </details>
+        </section>
+      </div>
 
-      <!-- Options Footer Actions -->
-      <div class="tzv-options-footer">
-        <button type="button" class="tzv-btn-secondary" id="btn-reset-defaults">Reset to Defaults</button>
+      <!-- Footer & Action Buttons -->
+      <footer class="tzv-options-footer">
+        <button type="button" class="tzv-btn-secondary" id="btn-reset-defaults">Reset to Factory Defaults</button>
         <div style="display: flex; align-items: center; gap: 12px;">
-          <span class="tzv-save-status" id="save-status-msg">✓ Settings saved!</span>
+          <span id="save-status-msg" class="tzv-save-status">✓ Settings saved successfully!</span>
           <button type="submit" class="tzv-btn-save">Save Settings</button>
         </div>
-      </div>
+      </footer>
     </form>
   </div>
 
