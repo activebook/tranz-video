@@ -42,13 +42,12 @@ Whenever you see text you want to read, simply pause the video and click **Trans
 
 ## Features
 
-- **Translate Any On-Screen Text:** Understand words shown in any video, even without subtitles.
-- **Side-by-Side Bilingual View:** Shows the original words alongside the translation to help you learn languages.
-- **Movable & Resizable Window:** Drag the translation box anywhere on your screen and adjust its size as needed.
-- **Minimize Anytime:** Shrink the window into a small floating button to keep your screen clear.
-- **One-Click Copy:** Copy translated text to your clipboard with a single click.
-- **Clean & Unobtrusive:** The translation window only appears when you are watching a video, and stays hidden on regular websites.
-- **Private:** All your settings and keys are stored locally in your browser.
+- **AI Vision-Powered Translation:** Transcribes and translates visual text, game dialogue, on-screen signs, and lecture slides directly from video frames without needing subtitle tracks.
+- **Customizable Appearance & Themes:** Personalize your viewing experience with visual effects (**Frosted Glass / Glassmorphism**, **Translucent**, **Opaque**, **Glow**), adjustable backdrop opacity, and custom font sizes and colors.
+- **Tailored Prompt Orchestration:** Customize system and user prompts to adapt translations to your specific demands—tune for colloquial video slang, gaming terminology, technical jargon, or custom formatting.
+- **Flexible Bilingual & Immersion Modes:** Display side-by-side original and translated dialogue pairs for language learning, or switch to clean target-only subtitles.
+- **Universal AI Endpoint Compatibility:** Connect seamlessly to any OpenAI-compatible multimodal backend, whether self-hosted locally (Ollama, vLLM, LiteLLM) or via cloud vision APIs (Gemini, OpenAI).
+- **Intelligent Video-Aware HUD:** Automatically attaches to active video streams on YouTube, Bilibili, and other web players, auto-pauses during translation, and automatically refreshes when navigating to a new video.
 
 ---
 
@@ -69,10 +68,11 @@ Whenever you see text you want to read, simply pause the video and click **Trans
 ## Setup
 
 1. Click the **Tranz Video** icon in your toolbar and open **Settings** (or right-click the icon and choose **Options**).
-2. Choose your preferred setup:
-   - **Target Language:** Select the language you want to translate into (e.g. English, Chinese, Japanese, etc.).
-   - **AI Service:** Connect your local AI model (such as Ollama or LiteLLM) or enter your API key for a cloud service (such as Gemini or OpenAI).
-3. Click **Test API Connection** to verify everything is working, then click **Save Settings**.
+2. Configure your preferences across the three tabs:
+   - **⚡ AI Service:** Connect your local AI model (such as Ollama or LiteLLM) or enter your API key for a cloud vision service (such as Gemini or OpenAI). Click **Test API Connection** to verify connectivity.
+   - **🎨 Appearance:** Choose your preferred window effect (Frosted Glass, Translucent, Opaque, Glow), adjust background opacity, and customize subtitle text sizes and colors with live preview.
+   - **🌐 Translation:** Select your target language, output mode (Bilingual vs Target Only), and optionally customize system/user prompts for domain-specific tasks.
+3. Click **Save Settings**.
 
 ---
 
