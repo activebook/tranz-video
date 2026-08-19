@@ -25,6 +25,8 @@
   let pillEl = null;
   let isTranslating = false;
   let hasUserMovedWindow = false;
+  let lastTrackedUrl = window.location.href;
+  let lastTrackedVideoSrc = '';
 
   // Window geometry state
   let state = {
@@ -158,6 +160,49 @@
   }
 
   /**
+   * Resets HUD display content and status banner to the pristine initial state
+   */
+  function resetHudContent() {
+    if (!windowEl) return;
+    const bodyContent = windowEl.querySelector('#tzv-body-content');
+    if (bodyContent) {
+      bodyContent.innerHTML = `
+        <div class="tzv-loading-state" id="tzv-empty-state">
+          <p style="color: var(--tzv-text-muted); font-size: 13px;">Click ⚡ to translate active video frame.</p>
+        </div>
+      `;
+    }
+    setStatus('ready', 'Ready');
+  }
+
+  /**
+   * Detects whether the user has navigated to another video or switched media streams,
+   * and clears previous messages if a transition has occurred.
+   */
+  function checkAndHandleVideoChange(video) {
+    const currentUrl = window.location.href;
+    const currentSrc = video ? (video.currentSrc || video.src || '') : '';
+
+    let hasChanged = false;
+    if (currentUrl !== lastTrackedUrl) {
+      hasChanged = true;
+      lastTrackedUrl = currentUrl;
+    }
+
+    if (currentSrc && lastTrackedVideoSrc && currentSrc !== lastTrackedVideoSrc) {
+      hasChanged = true;
+    }
+
+    if (currentSrc) {
+      lastTrackedVideoSrc = currentSrc;
+    }
+
+    if (hasChanged) {
+      resetHudContent();
+    }
+  }
+
+  /**
    * Synchronizes overlay visibility with video presence on the active page.
    * On pages without any <video> element (e.g. google.com), the window remains completely hidden.
    */
@@ -170,6 +215,7 @@
     const video = findTargetVideo();
     if (video || forceShow) {
       ensureHudElements();
+      checkAndHandleVideoChange(video);
       if (hudRoot) hudRoot.style.display = 'block';
     } else {
       if (hudRoot) {
@@ -873,15 +919,29 @@
 
   // Handle SPA (Single Page App) navigations (e.g. YouTube, Bilibili)
   window.addEventListener('yt-navigate-finish', () => {
+    resetHudContent();
+    setTimeout(() => syncVideoPresence(false), 400);
+  });
+  window.addEventListener('yt-page-data-updated', () => {
+    resetHudContent();
     setTimeout(() => syncVideoPresence(false), 400);
   });
   window.addEventListener('popstate', () => {
+    resetHudContent();
     setTimeout(() => syncVideoPresence(false), 400);
   });
 
-  // Watch for media play/load events
+  // Watch for media play/loadstart events across video streams
+  document.addEventListener('loadstart', (e) => {
+    if (e.target?.tagName === 'VIDEO') {
+      checkAndHandleVideoChange(e.target);
+      syncVideoPresence(false);
+    }
+  }, true);
+
   document.addEventListener('play', (e) => {
     if (e.target?.tagName === 'VIDEO') {
+      checkAndHandleVideoChange(e.target);
       syncVideoPresence(false);
     }
   }, true);
