@@ -81,5 +81,5 @@ jobs:
         run: |
           TAG="${{ steps.semver.outputs.tag }}"
           gh release create "$TAG" "$ZIP_NAME" \
-            --title "Release $TAG" \
+            --title "Tranz Video $TAG" \
             --generate-notes
