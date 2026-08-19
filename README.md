@@ -1,10 +1,13 @@
-# Tranz Video
-
-> **Translate on-screen text, game dialogue, and visual text from any web video.**
-
-[![Manifest V3](https://img.shields.io/badge/Manifest-V3-6366f1.svg)](https://developer.chrome.com/docs/extensions/mv3/intro/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Platform: Chrome / Edge / Brave](https://img.shields.io/badge/Platform-Chromium-38bdf8.svg)](https://www.google.com/chrome/)
+<div align="center">
+  <img src="images/icon.png" alt="Tranz Video Icon" width="128" height="128" />
+  <h1>Tranz Video</h1>
+  <p><strong>Translate on-screen text, game dialogue, and visual text from any web video.</strong></p>
+  <p>
+    <a href="https://developer.chrome.com/docs/extensions/mv3/intro/"><img src="https://img.shields.io/badge/Manifest-V3-6366f1.svg" alt="Manifest V3"></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
+    <a href="https://www.google.com/chrome/"><img src="https://img.shields.io/badge/Platform-Chromium-38bdf8.svg" alt="Platform: Chrome / Edge / Brave"></a>
+  </p>
+</div>
 
 **Tranz Video** is a Google Chrome extension that lets you translate any text you see inside a video.
 
