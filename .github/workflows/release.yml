@@ -64,6 +64,13 @@ jobs:
           echo "Target Release Tag: $NEW_TAG"
           echo "tag=$NEW_TAG" >> "$GITHUB_OUTPUT"
 
+      - name: Synchronize Manifest Version with Target Release Tag
+        run: |
+          TAG="${{ steps.semver.outputs.tag }}"
+          CLEAN_VER="${TAG#v}"
+          echo "Synchronizing manifest.json version to: $CLEAN_VER"
+          jq --arg v "$CLEAN_VER" '.version = $v' manifest.json > manifest.json.tmp && mv manifest.json.tmp manifest.json
+
       - name: Build Extension Archive
         run: |
           TAG="${{ steps.semver.outputs.tag }}"
@@ -89,3 +96,15 @@ jobs:
           gh release create "$TAG" "$ZIP_NAME" \
             --title "Tranz Video $TAG" \
             --generate-notes
+
+      - name: Commit Manifest Version Bump to Main
+        run: |
+          TAG="${{ steps.semver.outputs.tag }}"
+          CLEAN_VER="${TAG#v}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add manifest.json
+          if ! git diff --staged --quiet; then
+            git commit -m "chore(release): synchronize manifest.json version to $CLEAN_VER [skip ci]"
+            git push origin main
+          fi
