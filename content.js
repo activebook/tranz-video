@@ -131,6 +131,66 @@
 
     state.isVisible = true;
     applyGeometry();
+    applyHudTheme(currentConfig?.hudTheme);
+  }
+
+  /**
+   * Converts a 3-hex or 6-hex color code to RGB components
+   */
+  function hexToRgb(hex) {
+    if (!hex) return { r: 10, g: 14, b: 22 };
+    let clean = hex.replace('#', '');
+    if (clean.length === 3) {
+      clean = clean.split('').map((c) => c + c).join('');
+    }
+    const num = parseInt(clean, 16);
+    if (isNaN(num)) return { r: 10, g: 14, b: 22 };
+    return {
+      r: (num >> 16) & 255,
+      g: (num >> 8) & 255,
+      b: num & 255
+    };
+  }
+
+  /**
+   * Dynamically applies HUD appearance theme (background, opacity, blur, text colors & sizes)
+   */
+  function applyHudTheme(theme) {
+    if (!windowEl) return;
+    const cfg = theme || currentConfig?.hudTheme || {
+      sourceFontSize: 13,
+      sourceColor: '#38bdf8',
+      targetFontSize: 14,
+      targetColor: '#ffffff',
+      hudBgColor: '#0a0e16',
+      hudOpacity: 88,
+      hudEffect: 'translucent'
+    };
+
+    const hex = cfg.hudBgColor || '#0a0e16';
+    const opacity = (typeof cfg.hudOpacity === 'number' ? cfg.hudOpacity : 88) / 100;
+    const rgb = hexToRgb(hex);
+
+    let bgValue = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${opacity})`;
+    let backdropFilter = 'none';
+
+    if (cfg.hudEffect === 'glassmorphism') {
+      backdropFilter = 'blur(12px) saturate(180%)';
+      bgValue = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${Math.min(0.80, Number((opacity * 0.85).toFixed(2)))})`;
+    } else if (cfg.hudEffect === 'opaque') {
+      bgValue = `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
+      backdropFilter = 'none';
+    } else if (cfg.hudEffect === 'transparent_glow') {
+      bgValue = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.25)`;
+      backdropFilter = 'none';
+    }
+
+    windowEl.style.setProperty('--tzv-custom-bg', bgValue);
+    windowEl.style.setProperty('--tzv-custom-backdrop', backdropFilter);
+    windowEl.style.setProperty('--tzv-source-size', `${cfg.sourceFontSize || 13}px`);
+    windowEl.style.setProperty('--tzv-source-color', cfg.sourceColor || '#38bdf8');
+    windowEl.style.setProperty('--tzv-target-size', `${cfg.targetFontSize || 14}px`);
+    windowEl.style.setProperty('--tzv-target-color', cfg.targetColor || '#ffffff');
   }
 
   /**
@@ -284,6 +344,7 @@
       hudRoot.appendChild(windowEl);
       hudRoot.appendChild(pillEl);
       attachEventListeners();
+      applyHudTheme();
     }
 
     if (!parentContainer.contains(hudRoot)) {
@@ -988,6 +1049,11 @@
       if (changes.targetLanguage !== undefined) {
         currentConfig = currentConfig || {};
         currentConfig.targetLanguage = changes.targetLanguage.newValue;
+      }
+      if (changes.hudTheme !== undefined) {
+        currentConfig = currentConfig || {};
+        currentConfig.hudTheme = changes.hudTheme.newValue;
+        applyHudTheme(changes.hudTheme.newValue);
       }
     }
   });

@@ -46,7 +46,9 @@
 .tzv-window {
   position: fixed;
   pointer-events: auto;
-  background: var(--tzv-bg-overlay);
+  background: var(--tzv-custom-bg, var(--tzv-bg-overlay));
+  backdrop-filter: var(--tzv-custom-backdrop, none);
+  -webkit-backdrop-filter: var(--tzv-custom-backdrop, none);
   border: 1px solid var(--tzv-border-color);
   border-radius: var(--tzv-radius);
   box-shadow: var(--tzv-shadow-lg);
@@ -221,8 +223,8 @@
 
 /* Source Line: Vibrant Sky Cyan for instant visual identification */
 .tzv-pair-source {
-  font-size: 13px !important;
-  color: #38bdf8 !important;
+  font-size: var(--tzv-source-size, 13px) !important;
+  color: var(--tzv-source-color, #38bdf8) !important;
   line-height: 1.4 !important;
   user-select: text !important;
   white-space: pre-wrap !important;
@@ -234,9 +236,9 @@
 
 /* Target Translation Line: Pure Crisp White with bold weight */
 .tzv-pair-target {
-  font-size: 14px !important;
+  font-size: var(--tzv-target-size, 14px) !important;
   font-weight: 600 !important;
-  color: #ffffff !important;
+  color: var(--tzv-target-color, #ffffff) !important;
   line-height: 1.4 !important;
   user-select: text !important;
   white-space: pre-wrap !important;
@@ -351,7 +353,7 @@
 }
 
 /* ==========================================================================
-   Options Page Styling
+   Options Page Styling (Tabbed UI & Live Preview Theme Engine)
    ========================================================================== */
 
 body.tzv-options-body {
@@ -359,14 +361,14 @@ body.tzv-options-body {
   color: #f1f5f9;
   font-family: var(--tzv-font);
   margin: 0;
-  padding: 40px 20px;
+  padding: 30px 20px;
   display: flex;
   justify-content: center;
 }
 
 .tzv-options-container {
   width: 100%;
-  max-width: 640px;
+  max-width: 680px;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -399,12 +401,64 @@ body.tzv-options-body {
   font-size: 17px;
   font-weight: 700;
   letter-spacing: -0.3px;
+  margin: 0;
 }
 
 .tzv-options-subtitle {
   font-size: 11.5px;
   color: #94a3b8;
-  margin-top: 1px;
+  margin: 2px 0 0;
+}
+
+/* Modern Tab Navigation */
+.tzv-tabs-nav {
+  display: flex;
+  gap: 6px;
+  background: rgba(18, 24, 38, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 4px;
+}
+
+.tzv-tab-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 12px;
+  color: #94a3b8;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.tzv-tab-btn:hover {
+  color: #f1f5f9;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.tzv-tab-btn.tzv-tab-active {
+  background: rgba(99, 102, 241, 0.2);
+  border: 1px solid rgba(99, 102, 241, 0.4);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2);
+}
+
+/* Tab Panes */
+.tzv-tab-pane {
+  display: none;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tzv-tab-pane.tzv-tab-active {
+  display: flex;
 }
 
 .tzv-section {
@@ -414,7 +468,7 @@ body.tzv-options-body {
   padding: 14px 16px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
 .tzv-section-title {
@@ -424,12 +478,13 @@ body.tzv-options-body {
   display: flex;
   align-items: center;
   gap: 6px;
+  margin: 0;
 }
 
 .tzv-grid-2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: 12px;
 }
 
 .tzv-form-group {
@@ -523,62 +578,106 @@ body.tzv-options-body {
   color: #94a3b8;
 }
 
-/* Collapsible Advanced Details */
-.tzv-details {
-  background: rgba(18, 24, 38, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 10px;
-  overflow: hidden;
-  transition: all 0.2s ease;
+/* Color & Range Controls */
+.tzv-color-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.tzv-details[open] {
-  background: rgba(18, 24, 38, 0.85);
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
-.tzv-summary {
-  padding: 10px 14px;
+.tzv-color-picker {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  width: 32px;
+  height: 32px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  background: transparent;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  user-select: none;
-  font-size: 13px;
-  font-weight: 500;
+  padding: 0;
+  overflow: hidden;
+}
+
+.tzv-color-picker::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.tzv-color-picker::-webkit-color-swatch {
+  border: none;
+  border-radius: 4px;
+}
+
+.tzv-color-hex-text {
+  font-family: monospace;
+  font-size: 12px;
   color: #cbd5e1;
-  transition: background 0.15s ease;
+  text-transform: uppercase;
 }
 
-.tzv-summary:hover {
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.tzv-summary-title {
+.tzv-range-wrap {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 10px;
+}
+
+.tzv-range-slider {
+  flex: 1;
+  accent-color: var(--tzv-primary);
+  cursor: pointer;
+}
+
+.tzv-range-value {
+  min-width: 44px;
+  text-align: right;
+  font-family: monospace;
+  font-size: 12px;
+  color: #94a3b8;
   font-weight: 600;
 }
 
-.tzv-summary-sub {
-  font-size: 11px;
-  color: #64748b;
-}
-
-.tzv-details-content {
-  padding: 12px 14px 14px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+/* Live Interactive Preview Container */
+.tzv-preview-container {
+  background: linear-gradient(135deg, #091322 0%, #151b2e 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 10px;
+  position: relative;
+  overflow: hidden;
+  background-image: 
+    radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 40%),
+    radial-gradient(circle at 90% 80%, rgba(56, 189, 248, 0.12) 0%, transparent 40%);
+}
+
+.tzv-preview-badge {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #38bdf8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tzv-preview-window {
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--tzv-radius);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: background 0.15s ease, backdrop-filter 0.15s ease;
 }
 
 .tzv-options-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 4px;
+  margin-top: 6px;
 }
 
 .tzv-btn-secondary {

@@ -19,6 +19,15 @@ Preserve the natural reading order, UI labels, and character dialogue hierarchy.
 {MODE_INSTRUCTIONS}`,
   autoPause: true,
   extensionEnabled: true,
+  hudTheme: {
+    sourceFontSize: 13,
+    sourceColor: '#38bdf8',
+    targetFontSize: 14,
+    targetColor: '#ffffff',
+    hudBgColor: '#0a0e16',
+    hudOpacity: 88,
+    hudEffect: 'translucent' // 'translucent' | 'glassmorphism' | 'opaque' | 'transparent_glow'
+  },
   windowGeometry: {
     x: 32,
     y: 32,
@@ -48,6 +57,10 @@ async function getConfig() {
   return {
     ...DEFAULT_CONFIG,
     ...stored,
+    hudTheme: {
+      ...DEFAULT_CONFIG.hudTheme,
+      ...(stored.hudTheme || {})
+    },
     windowGeometry: {
       ...DEFAULT_CONFIG.windowGeometry,
       ...(stored.windowGeometry || {})
