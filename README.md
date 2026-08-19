@@ -1,71 +1,71 @@
 # Tranz Video
 
-> **AI-Powered On-Screen Video Text Translator & Language Learning HUD for Google Chrome**
+> **Translate on-screen text, game dialogue, and visual text from any web video.**
 
 [![Manifest V3](https://img.shields.io/badge/Manifest-V3-6366f1.svg)](https://developer.chrome.com/docs/extensions/mv3/intro/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Platform: Chrome / Edge / Brave](https://img.shields.io/badge/Platform-Chromium-38bdf8.svg)](https://www.google.com/chrome/)
 
-**Tranz Video** is a browser extension that translates text directly from video screens using AI vision.
+**Tranz Video** is a Google Chrome extension that lets you translate any text you see inside a video.
 
-Unlike traditional subtitle tools that only read closed-caption files, Tranz Video reads the actual video image. It lets you translate video game dialogue, hardcoded foreign subtitles, on-screen signs, and presentation slides on any web video.
+While regular subtitle extensions only work when a video has uploaded subtitle files, Tranz Video reads the words directly from the video itself. This lets you translate game dialogues, hardcoded subtitles, on-screen signs, and presentation slides on any website.
 
 ---
 
 ## Why Tranz Video?
 
-Most subtitle extensions only work when a video has uploaded subtitle tracks (`.srt` or `.vtt`). They cannot help when text is part of the video itself:
+Standard subtitle tools cannot read text that is built into the video itself:
 
-- **Video Games & Walkthroughs:** Untranslated RPG dialogue boxes, game menus, quest text, and item descriptions.
-- **Foreign Media & Anime:** Hardcoded subtitles, signs, background text, and manga speech bubbles.
-- **Online Courses & Tutorials:** Text inside presentation slides, diagrams, and programming tutorials.
+- **Game Dialogues & Walkthroughs:** Translate dialogue boxes, skill descriptions, quest text, and in-game menus.
+- **Foreign Shows & Anime:** Read hardcoded subtitles, signs, and background text.
+- **Tutorials & Lectures:** Translate slides, code, diagrams, and foreign presentations.
 
-Tranz Video solves this. Pause any video, click **Translate Frame**, and instantly see the original text and its translation in a floating window.
+Whenever you see text you want to read, simply pause the video and click **Translate** to see the translation in a floating window.
 
 ---
 
-## What It Can Do
+## Features
 
-- **Translate Any On-Screen Text:** Understand dialogue, signs, and slides that have no subtitles.
-- **Bilingual Learning Display:** See the original transcribed line directly above the translated line, making it easy to learn new vocabulary in context.
-- **Floating, Movable Window:** Drag the translation window anywhere on your screen and resize it to fit your video layout.
-- **Minimize to Floating Pill:** Shrink the window into a small floating button when you want an unobstructed view of the video.
-- **One-Click Copy:** Easily copy all translated dialogue to your clipboard.
-- **Smart Video Detection:** Only appears when you are watching a video. It stays hidden during normal web browsing.
-- **Private & Local:** All settings, keys, and preferences are stored strictly on your computer.
+- **Translate Any On-Screen Text:** Understand words shown in any video, even without subtitles.
+- **Side-by-Side Bilingual View:** Shows the original words alongside the translation to help you learn languages.
+- **Movable & Resizable Window:** Drag the translation box anywhere on your screen and adjust its size as needed.
+- **Minimize Anytime:** Shrink the window into a small floating button to keep your screen clear.
+- **One-Click Copy:** Copy translated text to your clipboard with a single click.
+- **Clean & Unobtrusive:** The translation window only appears when you are watching a video, and stays hidden on regular websites.
+- **Private:** All your settings and keys are stored locally in your browser.
 
 ---
 
 ## How to Install
 
-1. Download or clone this repository to your computer.
-2. Open your browser and go to `chrome://extensions/` (works in Chrome, Edge, Brave, and other Chromium browsers).
-3. Turn on the **Developer mode** toggle in the top-right corner.
+1. Download or clone this repository to your computer:
+   ```bash
+   git clone https://github.com/activebook/tranz-video.git
+   ```
+2. In your browser, navigate to `chrome://extensions/` (works on Chrome, Edge, Brave, and other Chromium browsers).
+3. Turn on the **Developer mode** switch in the top-right corner.
 4. Click **Load unpacked** in the top-left corner.
 5. Select the `tranz-video` folder.
-6. Pin **Tranz Video** to your browser toolbar for easy access.
+6. Pin **Tranz Video** to your browser toolbar.
 
 ---
 
-## Quick Setup
+## Setup
 
-1. Click the **Tranz Video** icon in your browser toolbar and select **Settings Dashboard** (or right-click the icon and choose **Options**).
-2. Enter your AI service details:
-   - **API Base URL:** Your AI endpoint (e.g., `http://127.0.0.1:8045/v1` for local models, or your cloud provider URL).
-   - **Model Identifier:** The model to use (e.g., `gemini-2.5-flash-lite` or `gpt-4o`).
-   - **API Key:** Required if you are using a cloud service (leave empty for local gateways).
-   - **Target Language:** Select the language you want text translated into.
-3. Click **Test API Connection** to confirm your setup is working.
-4. Click **Save Settings**.
+1. Click the **Tranz Video** icon in your toolbar and open **Settings** (or right-click the icon and choose **Options**).
+2. Choose your preferred setup:
+   - **Target Language:** Select the language you want to translate into (e.g. English, Chinese, Japanese, etc.).
+   - **AI Service:** Connect your local AI model (such as Ollama or LiteLLM) or enter your API key for a cloud service (such as Gemini or OpenAI).
+3. Click **Test API Connection** to verify everything is working, then click **Save Settings**.
 
 ---
 
 ## How to Use
 
-1. Open any website with video content (such as YouTube, Bilibili, or Netflix).
-2. Pause the video on any scene with text you want to read.
-3. Click the **⚡** button on the floating translation window or in the toolbar.
-4. The translated text will appear right over your video.
+1. Open any video on YouTube, Bilibili, Netflix, or any web player.
+2. Pause the video on a frame with text you want to translate.
+3. Click the **⚡** button on the floating window or in the toolbar.
+4. Read the translated text directly on top of the video.
 
 ---
 
@@ -81,20 +81,20 @@ Tranz Video can translate into:
 - 🇪🇸 **Spanish** (`es` / Español)
 - 🇫🇷 **French** (`fr` / Français)
 
-The original language in the video is detected automatically.
+The language in the video is detected automatically.
 
 ---
 
 ## Frequently Asked Questions
 
-**Does this work with full-screen videos?**  
-Yes. The translation window automatically moves into full-screen mode with your video.
+**Does it work in full screen?**  
+Yes. The translation window follows your video into full-screen mode automatically.
 
 **Can I use free or local AI models?**  
-Yes. You can use local AI runners like Ollama or LiteLLM without needing a paid cloud subscription.
+Yes. You can connect local AI tools like Ollama without paying for an API subscription.
 
-**Why is the window not showing up on regular websites?**  
-Tranz Video only activates when a video is present on the page, keeping your screen clean while browsing normal articles or search results.
+**Why does the window not appear on regular websites?**  
+Tranz Video stays hidden on normal web pages (like search engines or news sites) and only appears when a video is present.
 
 ---
 
