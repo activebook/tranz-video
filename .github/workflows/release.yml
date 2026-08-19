@@ -1,0 +1,85 @@
+name: Release Extension
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'images/**'
+      - '.github/workflows/jekyll-gh-pages.yml'
+      - 'goal/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Package & Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate Syntax & Manifest
+        run: |
+          jq empty manifest.json
+          node --check background.js
+          node --check content.js
+          node --check popup.js
+          node --check options.js
+
+      - name: Determine Next Semantic Release Tag
+        id: semver
+        run: |
+          git fetch --tags --force
+
+          MANIFEST_VER=$(jq -r .version manifest.json)
+          LATEST_TAG=$(git tag -l "v*" | sort -V | tail -n 1)
+
+          echo "Manifest Version: $MANIFEST_VER"
+          echo "Latest Git Tag: $LATEST_TAG"
+
+          if [ -z "$LATEST_TAG" ]; then
+            NEW_TAG="v${MANIFEST_VER}"
+          else
+            CLEAN_LATEST="${LATEST_TAG#v}"
+            HIGHEST=$(printf "%s\n%s" "$CLEAN_LATEST" "$MANIFEST_VER" | sort -V | tail -n 1)
+
+            if [ "$HIGHEST" = "$MANIFEST_VER" ] && [ "$MANIFEST_VER" != "$CLEAN_LATEST" ]; then
+              NEW_TAG="v${MANIFEST_VER}"
+            else
+              IFS="." read -r MAJOR MINOR PATCH <<< "$CLEAN_LATEST"
+              PATCH=$((PATCH + 1))
+              NEW_TAG="v${MAJOR}.${MINOR}.${PATCH}"
+            fi
+          fi
+
+          echo "Target Release Tag: $NEW_TAG"
+          echo "tag=$NEW_TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Build Extension Archive
+        run: |
+          TAG="${{ steps.semver.outputs.tag }}"
+          ZIP_NAME="tranz-video-${TAG}.zip"
+          zip -r "$ZIP_NAME" . \
+            -x ".git*" \
+            -x ".github/*" \
+            -x "images/*" \
+            -x "goal/*" \
+            -x "*.zip" \
+            -x "*.DS_Store" \
+            -x "scratch/*"
+          echo "ZIP_NAME=$ZIP_NAME" >> "$GITHUB_ENV"
+
+      - name: Create GitHub Release and Upload Asset
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.semver.outputs.tag }}"
+          gh release create "$TAG" "$ZIP_NAME" \
+            --title "Release $TAG" \
+            --generate-notes
