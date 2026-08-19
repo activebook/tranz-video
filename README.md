@@ -27,6 +27,19 @@ Whenever you see text you want to read, simply pause the video and click **Trans
 
 ---
 
+## Screenshots
+
+### Game Dialogue & UI
+![Game Dialogue Translation](images/jap_game.png)
+
+### Video Podcasts & Shows
+![Video Podcast Translation](images/jap_podcast.png)
+
+### Documents & Presentation Slides
+![Document Translation](images/jap_paper.png)
+
+---
+
 ## Features
 
 - **Translate Any On-Screen Text:** Understand words shown in any video, even without subtitles.
