@@ -70,35 +70,29 @@ Translating foreign video games has always been notoriously difficult because di
 
 ## How to Install
 
-### From Source (Developer Mode)
+### Option 1: Quick Install (Recommended)
 
-1. Download or clone this repository to your computer:
-   ```bash
-   git clone https://github.com/activebook/tranz-video.git
-   cd tranz-video
-   ```
-2. Install dependencies and build the extension bundle:
-   ```bash
-   npm install
-   npm run build
-   ```
-   *(For development with live file-watching, run `npm run dev`)*
-3. In your browser, navigate to `chrome://extensions/` (works on Chrome, Edge, Brave, and other Chromium browsers).
-4. Turn on the **Developer mode** switch in the top-right corner.
+1. Download the latest **`tranz-video-v*.zip`** from [**Releases**](https://github.com/activebook/tranz-video/releases/latest).
+2. Extract (unzip) the downloaded zip file on your computer.
+3. Open your browser and go to `chrome://extensions/` (works on Chrome, Edge, Brave, and other Chromium browsers).
+4. Turn on the **Developer mode** toggle in the top-right corner.
 5. Click **Load unpacked** in the top-left corner.
-6. Select the **`dist`** directory inside the `tranz-video` repository.
+6. Select the extracted folder.
 7. Pin **Tranz Video** to your browser toolbar.
 
----
+<details>
+<summary><strong>Option 2: Build From Source (Developers)</strong></summary>
 
-## Development Scripts
+```bash
+git clone https://github.com/activebook/tranz-video.git
+cd tranz-video
+npm install
+npm run build
+```
+*(For active development with live re-bundling, run `npm run dev`)*
 
-| Command | Description |
-|---|---|
-| `npm run build` | Builds the production distribution bundles into `dist/`. |
-| `npm run dev` | Watches `src/` and assets, compiling instantaneously into `dist/`. |
-| `npm run type-check` | Executes strict TypeScript static verification (`tsc --noEmit`). |
-| `npm run clean` | Cleans the output `dist/` directory. |
+In `chrome://extensions/`, enable Developer mode, click **Load unpacked**, and select the **`dist`** folder.
+</details>
 
 ---
 
