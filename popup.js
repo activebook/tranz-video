@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const enableToggle = document.getElementById('enable-toggle');
   const statusSubtext = document.getElementById('status-subtext');
   const targetLangSelect = document.getElementById('target-lang-select');
+  const learningModeSelect = document.getElementById('learning-mode-select');
   const openOptionsBtn = document.getElementById('btn-open-options');
 
   const versionBadge = document.querySelector('.popup-version');
@@ -18,13 +19,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 1. Load active configuration from storage
   try {
     if (chrome.runtime?.id) {
-      const config = await chrome.storage.local.get(['extensionEnabled', 'targetLanguage']);
+      const config = await chrome.storage.local.get(['extensionEnabled', 'targetLanguage', 'learningMode']);
       const isEnabled = config.extensionEnabled !== false; // Default true
       enableToggle.checked = isEnabled;
       updateStatusText(isEnabled);
 
       if (config.targetLanguage && targetLangSelect) {
         targetLangSelect.value = config.targetLanguage;
+      }
+      if (config.learningMode && learningModeSelect) {
+        learningModeSelect.value = config.learningMode;
       }
     }
   } catch (err) {
@@ -62,6 +66,20 @@ document.addEventListener('DOMContentLoaded', async () => {
       console.error('[Tranz Video] Failed to save target language:', err);
     }
   });
+
+  // 4. Handle Learning Mode Quick Switch
+  if (learningModeSelect) {
+    learningModeSelect.addEventListener('change', async (e) => {
+      const newMode = e.target.value;
+      try {
+        if (chrome.runtime?.id) {
+          await chrome.storage.local.set({ learningMode: newMode });
+        }
+      } catch (err) {
+        console.error('[Tranz Video] Failed to save learning mode:', err);
+      }
+    });
+  }
 
   // 4. Handle Open Settings Dashboard
   openOptionsBtn.addEventListener('click', () => {

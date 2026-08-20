@@ -258,8 +258,10 @@
   function applyHudTheme(theme) {
     if (!windowEl) return;
     const cfg = theme || currentConfig?.hudTheme || {
-      sourceFontSize: 13,
+      sourceFontSize: 18,
       sourceColor: '#38bdf8',
+      furiganaFontSize: 16,
+      furiganaColor: '#fbbf24',
       targetFontSize: 14,
       targetColor: '#ffffff',
       hudBgColor: '#0a0e16',
@@ -287,8 +289,10 @@
 
     windowEl.style.setProperty('--tzv-custom-bg', bgValue);
     windowEl.style.setProperty('--tzv-custom-backdrop', backdropFilter);
-    windowEl.style.setProperty('--tzv-source-size', `${cfg.sourceFontSize || 13}px`);
+    windowEl.style.setProperty('--tzv-source-size', `${cfg.sourceFontSize || 18}px`);
     windowEl.style.setProperty('--tzv-source-color', cfg.sourceColor || '#38bdf8');
+    windowEl.style.setProperty('--tzv-furigana-size', `${cfg.furiganaFontSize || 16}px`);
+    windowEl.style.setProperty('--tzv-furigana-color', cfg.furiganaColor || '#fbbf24');
     windowEl.style.setProperty('--tzv-target-size', `${cfg.targetFontSize || 14}px`);
     windowEl.style.setProperty('--tzv-target-color', cfg.targetColor || '#ffffff');
   }
@@ -696,12 +700,16 @@
     while ((match = pairBlockRegex.exec(cleanedText)) !== null) {
       const blockContent = match[1];
       const srcMatch = blockContent.match(/\[(?:SRC|SOURCE|JP)\]([\s\S]*?)\[\/(?:SRC|SOURCE|JP)\]/i);
+      const phoMatch = blockContent.match(/\[(?:PHO|PHONETIC|FURI|FURIGANA|READING)\]([\s\S]*?)\[\/(?:PHO|PHONETIC|FURI|FURIGANA|READING)\]/i);
       const transMatch = blockContent.match(/\[(?:TRANS|TARGET|EN|CHN)\]([\s\S]*?)\[\/(?:TRANS|TARGET|EN|CHN)\]/i);
+      const vocabMatch = blockContent.match(/\[(?:VOCAB|VOCABULARY|WORDS)\]([\s\S]*?)\[\/(?:VOCAB|VOCABULARY|WORDS)\]/i);
 
-      if (srcMatch || transMatch) {
+      if (srcMatch || transMatch || phoMatch || vocabMatch) {
         pairs.push({
           src: srcMatch ? srcMatch[1].trim() : '',
-          trans: transMatch ? transMatch[1].trim() : blockContent.trim()
+          pho: phoMatch ? phoMatch[1].trim() : '',
+          trans: transMatch ? transMatch[1].trim() : (srcMatch ? '' : blockContent.trim()),
+          vocab: vocabMatch ? vocabMatch[1].trim() : ''
         });
       }
     }
@@ -712,25 +720,37 @@
 
     // Pattern 2: Standalone sequential [SRC]...[/SRC] and [TRANS]...[/TRANS]
     const srcRegex = /\[(?:SRC|SOURCE|JP)\]([\s\S]*?)\[\/(?:SRC|SOURCE|JP)\]/gi;
+    const phoRegex = /\[(?:PHO|PHONETIC|FURI|FURIGANA|READING)\]([\s\S]*?)\[\/(?:PHO|PHONETIC|FURI|FURIGANA|READING)\]/gi;
     const transRegex = /\[(?:TRANS|TARGET|EN|CHN)\]([\s\S]*?)\[\/(?:TRANS|TARGET|EN|CHN)\]/gi;
+    const vocabRegex = /\[(?:VOCAB|VOCABULARY|WORDS)\]([\s\S]*?)\[\/(?:VOCAB|VOCABULARY|WORDS)\]/gi;
 
     const sources = [];
+    const phonetics = [];
     const targets = [];
-    let sMatch, tMatch;
+    const vocabs = [];
+    let sMatch, pMatch, tMatch, vMatch;
 
     while ((sMatch = srcRegex.exec(cleanedText)) !== null) {
       sources.push(sMatch[1].trim());
     }
+    while ((pMatch = phoRegex.exec(cleanedText)) !== null) {
+      phonetics.push(pMatch[1].trim());
+    }
     while ((tMatch = transRegex.exec(cleanedText)) !== null) {
       targets.push(tMatch[1].trim());
     }
+    while ((vMatch = vocabRegex.exec(cleanedText)) !== null) {
+      vocabs.push(vMatch[1].trim());
+    }
 
-    if (sources.length > 0 || targets.length > 0) {
-      const maxLen = Math.max(sources.length, targets.length);
+    if (sources.length > 0 || targets.length > 0 || phonetics.length > 0 || vocabs.length > 0) {
+      const maxLen = Math.max(sources.length, targets.length, phonetics.length, vocabs.length);
       for (let i = 0; i < maxLen; i++) {
         pairs.push({
           src: sources[i] || '',
-          trans: targets[i] || ''
+          pho: phonetics[i] || '',
+          trans: targets[i] || '',
+          vocab: vocabs[i] || ''
         });
       }
       return { type: 'pairs', pairs, raw: cleanedText };
@@ -742,7 +762,7 @@
     for (const line of lines) {
       if (line.includes(' / ')) {
         const parts = line.split(' / ');
-        slashPairs.push({ src: parts[0].trim(), trans: parts.slice(1).join(' / ').trim() });
+        slashPairs.push({ src: parts[0].trim(), pho: '', trans: parts.slice(1).join(' / ').trim(), vocab: '' });
       }
     }
     if (slashPairs.length >= 2) {
@@ -776,8 +796,19 @@
         if (pair.src) {
           innerHtml += `<div class="tzv-pair-source">${escapeHtml(pair.src)}</div>`;
         }
+        if (pair.pho) {
+          innerHtml += `<div class="tzv-pair-phonetic">${escapeHtml(pair.pho)}</div>`;
+        }
         if (pair.trans) {
           innerHtml += `<div class="tzv-pair-target">${escapeHtml(pair.trans)}</div>`;
+        }
+        if (pair.vocab) {
+          innerHtml += `
+            <div class="tzv-pair-vocab">
+              <div class="tzv-vocab-header">📚 Key Vocabulary</div>
+              <div class="tzv-vocab-content">${escapeHtml(pair.vocab)}</div>
+            </div>
+          `;
         }
 
         item.innerHTML = innerHtml;
@@ -1140,6 +1171,10 @@
       if (changes.targetLanguage !== undefined) {
         currentConfig = currentConfig || {};
         currentConfig.targetLanguage = changes.targetLanguage.newValue;
+      }
+      if (changes.learningMode !== undefined) {
+        currentConfig = currentConfig || {};
+        currentConfig.learningMode = changes.learningMode.newValue;
       }
       if (changes.hudTheme !== undefined) {
         currentConfig = currentConfig || {};

@@ -32,6 +32,11 @@ const sourceFontSizeVal = document.getElementById('sourceFontSize-val');
 const sourceColorInput = document.getElementById('sourceColor');
 const sourceColorHex = document.getElementById('sourceColor-hex');
 
+const furiganaFontSizeInput = document.getElementById('furiganaFontSize');
+const furiganaFontSizeVal = document.getElementById('furiganaFontSize-val');
+const furiganaColorInput = document.getElementById('furiganaColor');
+const furiganaColorHex = document.getElementById('furiganaColor-hex');
+
 const targetFontSizeInput = document.getElementById('targetFontSize');
 const targetFontSizeVal = document.getElementById('targetFontSize-val');
 const targetColorInput = document.getElementById('targetColor');
@@ -77,6 +82,8 @@ function updateLivePreview() {
   hudOpacityVal.innerText = `${hudOpacityInput.value}%`;
   sourceFontSizeVal.innerText = `${sourceFontSizeInput.value}px`;
   sourceColorHex.innerText = sourceColorInput.value.toUpperCase();
+  furiganaFontSizeVal.innerText = `${furiganaFontSizeInput.value}px`;
+  furiganaColorHex.innerText = furiganaColorInput.value.toUpperCase();
   targetFontSizeVal.innerText = `${targetFontSizeInput.value}px`;
   targetColorHex.innerText = targetColorInput.value.toUpperCase();
 
@@ -105,6 +112,8 @@ function updateLivePreview() {
     // Set CSS custom properties on preview window container
     previewWindow.style.setProperty('--tzv-source-size', `${sourceFontSizeInput.value}px`);
     previewWindow.style.setProperty('--tzv-source-color', sourceColorInput.value);
+    previewWindow.style.setProperty('--tzv-furigana-size', `${furiganaFontSizeInput.value}px`);
+    previewWindow.style.setProperty('--tzv-furigana-color', furiganaColorInput.value);
     previewWindow.style.setProperty('--tzv-target-size', `${targetFontSizeInput.value}px`);
     previewWindow.style.setProperty('--tzv-target-color', targetColorInput.value);
 
@@ -115,11 +124,37 @@ function updateLivePreview() {
       el.style.setProperty('color', sourceColorInput.value, 'important');
     });
 
+    const allPhonetics = previewWindow.querySelectorAll('.tzv-pair-phonetic');
+    allPhonetics.forEach((el) => {
+      el.style.setProperty('font-size', `${furiganaFontSizeInput.value}px`, 'important');
+      el.style.setProperty('color', furiganaColorInput.value, 'important');
+    });
+
     const allTargets = previewWindow.querySelectorAll('.tzv-pair-target');
     allTargets.forEach((el) => {
       el.style.setProperty('font-size', `${targetFontSizeInput.value}px`, 'important');
       el.style.setProperty('color', targetColorInput.value, 'important');
     });
+
+    // Update preview based on selected learning mode
+    const selectedMode = form.querySelector('input[name="learningMode"]:checked')?.value || 'bilingual';
+    const phoEl = document.getElementById('preview-phonetic-line');
+    const vocabEl = document.getElementById('preview-vocab-card');
+    const srcEl = document.getElementById('preview-source-line');
+    const srcEl2 = document.getElementById('preview-source-line-2');
+
+    if (phoEl) {
+      phoEl.style.display = selectedMode === 'furigana' ? 'block' : 'none';
+    }
+    if (vocabEl) {
+      vocabEl.style.display = selectedMode === 'vocabulary' ? 'block' : 'none';
+    }
+    if (srcEl) {
+      srcEl.style.display = selectedMode === 'target_only' ? 'none' : 'block';
+    }
+    if (srcEl2) {
+      srcEl2.style.display = selectedMode === 'target_only' ? 'none' : 'block';
+    }
   }
 }
 
@@ -177,6 +212,9 @@ async function loadStoredOptions() {
     sourceFontSizeInput.value = theme.sourceFontSize || DEFAULT_CONFIG.hudTheme.sourceFontSize;
     sourceColorInput.value = theme.sourceColor || DEFAULT_CONFIG.hudTheme.sourceColor;
 
+    furiganaFontSizeInput.value = theme.furiganaFontSize || DEFAULT_CONFIG.hudTheme.furiganaFontSize;
+    furiganaColorInput.value = theme.furiganaColor || DEFAULT_CONFIG.hudTheme.furiganaColor;
+
     targetFontSizeInput.value = theme.targetFontSize || DEFAULT_CONFIG.hudTheme.targetFontSize;
     targetColorInput.value = theme.targetColor || DEFAULT_CONFIG.hudTheme.targetColor;
 
@@ -221,6 +259,8 @@ async function handleSaveOptions(e) {
       hudOpacity: parseInt(hudOpacityInput.value, 10),
       sourceFontSize: parseInt(sourceFontSizeInput.value, 10),
       sourceColor: sourceColorInput.value,
+      furiganaFontSize: parseInt(furiganaFontSizeInput.value, 10),
+      furiganaColor: furiganaColorInput.value,
       targetFontSize: parseInt(targetFontSizeInput.value, 10),
       targetColor: targetColorInput.value
     },
@@ -300,6 +340,8 @@ async function handleResetDefaults() {
   hudOpacityInput,
   sourceFontSizeInput,
   sourceColorInput,
+  furiganaFontSizeInput,
+  furiganaColorInput,
   targetFontSizeInput,
   targetColorInput
 ].forEach((input) => {
@@ -307,7 +349,7 @@ async function handleResetDefaults() {
   input.addEventListener('change', updateLivePreview);
 });
 
-form.querySelectorAll('input[name="hudEffect"]').forEach((radio) => {
+form.querySelectorAll('input[name="hudEffect"], input[name="learningMode"]').forEach((radio) => {
   radio.addEventListener('change', updateLivePreview);
 });
 

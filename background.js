@@ -20,8 +20,10 @@ Preserve the natural reading order, UI labels, and character dialogue hierarchy.
   autoPause: true,
   extensionEnabled: true,
   hudTheme: {
-    sourceFontSize: 13,
+    sourceFontSize: 18,
     sourceColor: '#38bdf8',
+    furiganaFontSize: 16,
+    furiganaColor: '#fbbf24',
     targetFontSize: 14,
     targetColor: '#ffffff',
     hudBgColor: '#0a0e16',
@@ -79,6 +81,25 @@ function buildUserPrompt(config) {
     modeInstructions = `Output format: For each on-screen dialogue line or text block, output:
 [PAIR]
 [TRANS]Fluent translation in ${targetLangName}[/TRANS]
+[/PAIR]`;
+  } else if (config.learningMode === 'furigana') {
+    modeInstructions = `Output format: For Japanese on-screen text, transcribe the original Japanese text, provide the Hiragana reading (Furigana) for all Kanji/words, and provide the fluent translation in ${targetLangName}.
+Output each text block using this exact structure:
+[PAIR]
+[SRC]Original Japanese text[/SRC]
+[PHO]Hiragana pronunciation reading with word spacing (e.g. やどや に とまって たいりょく を かいふく しますか？)[/PHO]
+[TRANS]Fluent translation in ${targetLangName}[/TRANS]
+[/PAIR]`;
+  } else if (config.learningMode === 'vocabulary') {
+    modeInstructions = `Output format: Transcribe on-screen text, translate it into ${targetLangName}, and extract 1 to 4 key vocabulary words, grammar phrases, or idioms from the sentence with their pronunciation and concise meaning.
+Output each text block using this exact structure:
+[PAIR]
+[SRC]Original source text[/SRC]
+[TRANS]Fluent translation in ${targetLangName}[/TRANS]
+[VOCAB]
+• Word/phrase (reading) — Meaning in ${targetLangName}
+• Word/phrase (reading) — Meaning in ${targetLangName}
+[/VOCAB]
 [/PAIR]`;
   } else {
     // Default: bilingual pair mode
