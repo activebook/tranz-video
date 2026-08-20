@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Tranz Video: On-Screen Video Text Translator",
   "short_name": "Tranz Video",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "description": "Translate on-screen text, game dialogue, and visual text from any web video using AI vision.",
   "icons": {
     "16": "icons/icon16.png",
