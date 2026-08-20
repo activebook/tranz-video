@@ -27,27 +27,47 @@ Whenever you see text you want to read, simply pause the video and click **Trans
 
 ---
 
-## Screenshots
+---
 
-### Game Dialogue & UI
-![Game Dialogue Translation](images/jap_game.png)
+## 🎮 Perfect for Gaming & Stream Walkthroughs
 
-### Video Podcasts & Shows
+Translating foreign video games has always been notoriously difficult because dialogue boxes, quest logs, choice prompts, item descriptions, and skill menus are baked directly into video frames with no subtitle files available.
+
+**Tranz Video** turns any foreign gameplay video, stream, or visual novel into an interactive language-learning experience:
+
+| RPG Dialogue & Scene Transcription | In-Game Selection Menus & Prompts | Phonetic Furigana & Vocabulary Cards |
+| :---: | :---: | :---: |
+| ![RPG Dialogue](images/jap_game.png) | ![In-Game Selection](images/jap_game2.png) | ![Furigana & Vocab Card](images/jap_game3.png) |
+
+- 🗡️ **RPG & Visual Novel Dialogue:** Transcribe stylized Japanese, Korean, or Chinese dialogue boxes and on-screen story text.
+- 📖 **Japanese Furigana Mode:** Automatically generate Hiragana reading pronunciation for complex Kanji names, locations, and lore terms.
+- 🧠 **Vocabulary Breakdown:** Extract game-specific item names, verbs, and idioms into an integrated glossary card below each line.
+- 📺 **Livestreams & Walkthroughs:** Follow along with foreign creators on YouTube Gaming, Twitch, and Bilibili without getting lost in menus.
+
+---
+
+## More Screenshots & Use Cases
+
+### 🎙️ Video Podcasts, Shows & Anime
 ![Video Podcast Translation](images/jap_podcast.png)
 
-### Documents & Presentation Slides
+### 📄 Presentations, Whitepapers & Technical Slides
 ![Document Translation](images/jap_paper.png)
 
 ---
 
 ## Features
 
-- **AI Vision-Powered Translation:** Transcribes and translates visual text, game dialogue, on-screen signs, and lecture slides directly from video frames without needing subtitle tracks.
-- **Customizable Appearance & Themes:** Personalize your viewing experience with visual effects (**Frosted Glass / Glassmorphism**, **Translucent**, **Opaque**, **Glow**), adjustable backdrop opacity, and custom font sizes and colors.
+- **AI Vision-Powered OCR & Translation:** Transcribes and translates visual text, game dialogue, on-screen signs, and lecture slides directly from video frames without requiring pre-existing subtitle tracks.
+- **Dedicated Language Learning Modes:**
+  - **Bilingual Pair:** Displays interleaved source text and target translations side-by-side.
+  - **Japanese Furigana:** Extracts Hiragana pronunciation readings with natural word spacing for Japanese learners.
+  - **Vocabulary Breakdown:** Automatically generates a concise glossary of key terms, verbs, and idioms extracted from dialogue.
+  - **Target Only:** Clean, immersion-style single translation display.
+- **Multiple AI Endpoints & Instant Switching:** Configure and manage multiple AI provider profiles (Local Ollama / vLLM, Google Gemini, OpenAI Direct, OpenRouter) and switch active backends on the fly directly from the toolbar popup.
+- **Customizable Appearance & Themes:** Personalize your HUD with visual effects (**Frosted Glass / Glassmorphism**, **Translucent**, **Opaque**, **Glow**), customizable background opacity, and independent font size and color controls for Source (`#38BDF8`), Furigana (`#FBBF24`), and Target (`#FFFFFF`) text.
 - **Tailored Prompt Orchestration:** Customize system and user prompts to adapt translations to your specific demands—tune for colloquial video slang, gaming terminology, technical jargon, or custom formatting.
-- **Flexible Bilingual & Immersion Modes:** Display side-by-side original and translated dialogue pairs for language learning, or switch to clean target-only subtitles.
-- **Universal AI Endpoint Compatibility:** Connect seamlessly to any OpenAI-compatible multimodal backend, whether self-hosted locally (Ollama, vLLM, LiteLLM) or via cloud vision APIs (Gemini, OpenAI).
-- **Intelligent Video-Aware HUD:** Automatically attaches to active video streams on YouTube, Bilibili, and other web players, auto-pauses during translation, and automatically refreshes when navigating to a new video.
+- **Intelligent Video-Aware HUD:** Automatically attaches to active video streams on YouTube, Bilibili, and other web players, auto-pauses during translation, and automatically refreshes when navigating between videos.
 
 ---
 
@@ -69,9 +89,9 @@ Whenever you see text you want to read, simply pause the video and click **Trans
 
 1. Click the **Tranz Video** icon in your toolbar and open **Settings** (or right-click the icon and choose **Options**).
 2. Configure your preferences across the three tabs:
-   - **⚡ AI Service:** Connect your local AI model (such as Ollama or LiteLLM) or enter your API key for a cloud vision service (such as Gemini or OpenAI). Click **Test API Connection** to verify connectivity.
-   - **🎨 Appearance:** Choose your preferred window effect (Frosted Glass, Translucent, Opaque, Glow), adjust background opacity, and customize subtitle text sizes and colors with live preview.
-   - **🌐 Translation:** Select your target language, output mode (Bilingual vs Target Only), and optionally customize system/user prompts for domain-specific tasks.
+   - **⚡ AI Service:** Select or add your preferred AI provider profile (**Local Ollama**, **Google Gemini**, **OpenAI Direct**, **OpenRouter**, or custom proxies). Click **Test API Connection** to verify latency.
+   - **🎨 Appearance:** Choose your preferred window effect (Frosted Glass, Translucent, Opaque, Glow), adjust background opacity, and customize font sizes and colors for Source, Furigana, and Target text with real-time live preview.
+   - **🌐 Translation:** Select your target language, output mode (**Bilingual Pair**, **Japanese Furigana**, **Vocabulary Breakdown**, or **Target Only**), and optionally customize system and user prompts.
 3. Click **Save Settings**.
 
 ---
