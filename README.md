@@ -85,9 +85,9 @@ Translating foreign video games has always been notoriously difficult because di
 
 1. Click the **Tranz Video** icon in your toolbar and open **Settings** (or right-click the icon and choose **Options**).
 2. Configure your preferences across the three tabs:
-   - **⚡ AI Service:** Select or add your preferred AI provider profile (**Local Ollama**, **Google Gemini**, **OpenAI Direct**, **OpenRouter**, or custom proxies). Click **Test API Connection** to verify latency.
-   - **🎨 Appearance:** Choose your preferred window effect (Frosted Glass, Translucent, Opaque, Glow), adjust background opacity, and customize font sizes and colors for Source, Furigana, and Target text with real-time live preview.
-   - **🌐 Translation:** Select your target language, output mode (**Bilingual Pair**, **Japanese Furigana**, **Vocabulary Breakdown**, or **Target Only**), and optionally customize system and user prompts.
+   - **AI Service:** Select or add your preferred AI provider profile (**Local Ollama**, **Google Gemini**, **OpenAI Direct**, **OpenRouter**, or custom proxies). Click **Test API Connection** to verify latency.
+   - **Appearance:** Choose your preferred window effect (Frosted Glass, Translucent, Opaque, Glow), adjust background opacity, and customize font sizes and colors for Source, Furigana, and Target text with real-time live preview.
+   - **Translation:** Select your target language, output mode (**Bilingual Pair**, **Japanese Furigana**, **Vocabulary Breakdown**, or **Target Only**), and optionally customize system and user prompts.
 3. Click **Save Settings**.
 
 ---
