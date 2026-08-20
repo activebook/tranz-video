@@ -223,7 +223,7 @@
 
 /* Source Line: Vibrant Sky Cyan for instant visual identification */
 .tzv-pair-source {
-  font-size: var(--tzv-source-size, 13px) !important;
+  font-size: var(--tzv-source-size, 18px) !important;
   color: var(--tzv-source-color, #38bdf8) !important;
   line-height: 1.4 !important;
   user-select: text !important;
@@ -246,6 +246,48 @@
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95) !important;
   margin: 0 !important;
   padding: 0 !important;
+}
+
+/* Phonetic / Furigana Reading Line: Configurable custom font & color */
+.tzv-pair-phonetic {
+  font-size: var(--tzv-furigana-size, 16px) !important;
+  font-weight: 400 !important;
+  color: var(--tzv-furigana-color, #fbbf24) !important;
+  line-height: 1.3 !important;
+  letter-spacing: 0.3px !important;
+  user-select: text !important;
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9) !important;
+  margin: 1px 0 2px 0 !important;
+  padding: 0 !important;
+}
+
+/* Key Vocabulary Glossary Card */
+.tzv-pair-vocab {
+  margin-top: 6px !important;
+  padding: 6px 9px !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-left: 2.5px solid var(--tzv-primary, #6366f1) !important;
+  border-radius: 4px !important;
+  backdrop-filter: blur(4px);
+}
+
+.tzv-vocab-header {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  color: #a5b4fc !important;
+  letter-spacing: 0.2px !important;
+  margin-bottom: 3px !important;
+  text-transform: uppercase !important;
+}
+
+.tzv-vocab-content {
+  font-size: 12px !important;
+  line-height: 1.45 !important;
+  color: #e2e8f0 !important;
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
 }
 
 /* Minimized Floating Pill - Slim & Compact */

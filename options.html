@@ -102,11 +102,17 @@
               <div class="tzv-pairs-list">
                 <div class="tzv-pair-item">
                   <div class="tzv-pair-source" id="preview-source-line">宿屋に泊まって体力を回復しますか？</div>
+                  <div class="tzv-pair-phonetic" id="preview-phonetic-line">やどや に とまって たいりょく を かいふく しますか？</div>
                   <div class="tzv-pair-target" id="preview-target-line">Would you like to stay at the inn and restore health?</div>
+                  <div class="tzv-pair-vocab" id="preview-vocab-card">
+                    <div class="tzv-vocab-header">📚 Key Vocabulary</div>
+                    <div class="tzv-vocab-content">• 宿屋 (yadoya) — Inn / lodge
+• 体力 (tairyoku) — HP / stamina</div>
+                  </div>
                 </div>
                 <div class="tzv-pair-item">
-                  <div class="tzv-pair-source">▶ はい / いいえ</div>
-                  <div class="tzv-pair-target">▶ Yes / No</div>
+                  <div class="tzv-pair-source" id="preview-source-line-2">▶ はい / いいえ</div>
+                  <div class="tzv-pair-target" id="preview-target-line-2">▶ Yes / No</div>
                 </div>
               </div>
             </div>
@@ -172,8 +178,8 @@
             <div class="tzv-form-group">
               <label class="tzv-form-label" for="sourceFontSize">Source Text Size (px)</label>
               <div class="tzv-range-wrap">
-                <input type="range" class="tzv-range-slider" id="sourceFontSize" name="sourceFontSize" min="11" max="22" step="1" value="13">
-                <span class="tzv-range-value" id="sourceFontSize-val">13px</span>
+                <input type="range" class="tzv-range-slider" id="sourceFontSize" name="sourceFontSize" min="11" max="28" step="1" value="18">
+                <span class="tzv-range-value" id="sourceFontSize-val">18px</span>
               </div>
             </div>
 
@@ -188,9 +194,27 @@
 
           <div class="tzv-grid-2">
             <div class="tzv-form-group">
+              <label class="tzv-form-label" for="furiganaFontSize">Pronunciation / Furigana Size (px)</label>
+              <div class="tzv-range-wrap">
+                <input type="range" class="tzv-range-slider" id="furiganaFontSize" name="furiganaFontSize" min="10" max="26" step="1" value="16">
+                <span class="tzv-range-value" id="furiganaFontSize-val">16px</span>
+              </div>
+            </div>
+
+            <div class="tzv-form-group">
+              <label class="tzv-form-label" for="furiganaColor">Pronunciation / Furigana Color</label>
+              <div class="tzv-color-input-wrap">
+                <input type="color" class="tzv-color-picker" id="furiganaColor" name="furiganaColor" value="#fbbf24">
+                <span class="tzv-color-hex-text" id="furiganaColor-hex">#FBBF24</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="tzv-grid-2">
+            <div class="tzv-form-group">
               <label class="tzv-form-label" for="targetFontSize">Target Translation Size (px)</label>
               <div class="tzv-range-wrap">
-                <input type="range" class="tzv-range-slider" id="targetFontSize" name="targetFontSize" min="12" max="26" step="1" value="14">
+                <input type="range" class="tzv-range-slider" id="targetFontSize" name="targetFontSize" min="11" max="26" step="1" value="14">
                 <span class="tzv-range-value" id="targetFontSize-val">14px</span>
               </div>
             </div>
@@ -231,10 +255,18 @@
 
             <div class="tzv-form-group">
               <label class="tzv-form-label">Output Mode</label>
-              <div class="tzv-radio-group-compact">
+              <div class="tzv-radio-group-compact" style="flex-wrap: wrap;">
                 <label class="tzv-radio-chip">
                   <input type="radio" name="learningMode" value="bilingual" checked>
                   <span>Bilingual Pair</span>
+                </label>
+                <label class="tzv-radio-chip">
+                  <input type="radio" name="learningMode" value="furigana">
+                  <span>Japanese Furigana</span>
+                </label>
+                <label class="tzv-radio-chip">
+                  <input type="radio" name="learningMode" value="vocabulary">
+                  <span>Vocabulary Breakdown</span>
                 </label>
                 <label class="tzv-radio-chip">
                   <input type="radio" name="learningMode" value="target_only">
