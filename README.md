@@ -27,28 +27,26 @@ Whenever you see text you want to read, simply pause the video and click **Trans
 
 ---
 
----
-
-## 🎮 Perfect for Gaming & Stream Walkthroughs
+## Game Translation & Walkthroughs
 
 Translating foreign video games has always been notoriously difficult because dialogue boxes, quest logs, choice prompts, item descriptions, and skill menus are baked directly into video frames with no subtitle files available.
 
 **Tranz Video** turns any foreign gameplay video, stream, or visual novel into an interactive language-learning experience:
 
-| RPG Dialogue & Scene Transcription | In-Game Selection Menus & Prompts | Phonetic Furigana & Vocabulary Cards |
+| RPG Dialogue Transcription | In-Game Menus & Prompts | Furigana & Vocabulary Cards |
 | :---: | :---: | :---: |
 | ![RPG Dialogue](images/jap_game.png) | ![In-Game Selection](images/jap_game2.png) | ![Furigana & Vocab Card](images/jap_game3.png) |
 
-- 🗡️ **RPG & Visual Novel Dialogue:** Transcribe stylized Japanese, Korean, or Chinese dialogue boxes and on-screen story text.
-- 📖 **Japanese Furigana Mode:** Automatically generate Hiragana reading pronunciation for complex Kanji names, locations, and lore terms.
-- 🧠 **Vocabulary Breakdown:** Extract game-specific item names, verbs, and idioms into an integrated glossary card below each line.
-- 📺 **Livestreams & Walkthroughs:** Follow along with foreign creators on YouTube Gaming, Twitch, and Bilibili without getting lost in menus.
+- **RPG & Visual Novel Dialogue:** Transcribe stylized Japanese, Korean, or Chinese dialogue boxes and on-screen story text.
+- **Japanese Furigana Mode:** Automatically generate Hiragana reading pronunciation for complex Kanji names, locations, and lore terms.
+- **Vocabulary Breakdown:** Extract game-specific item names, verbs, and idioms into an integrated glossary card below each line.
+- **Livestreams & Walkthroughs:** Follow along with foreign creators on YouTube Gaming, Twitch, and Bilibili without getting lost in menus.
 
 ---
 
-## More Screenshots & Use Cases
+## Other Use Cases
 
-| 🎙️ Video Podcasts, Shows & Anime | 📄 Presentations & Technical Slides |
+| Video Podcasts & Foreign Shows | Presentations & Technical Slides |
 | :---: | :---: |
 | ![Video Podcast Translation](images/jap_podcast.png) | ![Document Translation](images/jap_paper.png) |
 
