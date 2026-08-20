@@ -4,87 +4,78 @@
  * and endpoint connectivity diagnostics.
  */
 
-import { DEFAULT_CONFIG } from './background.js';
+import {
+  AppConfig,
+  DEFAULT_CONFIG,
+  EndpointProfile,
+  HudEffect,
+  LearningMode
+} from './types/config';
+import type { ExtensionMessage, TestConnectionResponse } from './types/messages';
+import { hexToRgb } from './utils/colors';
+import { escapeHtml } from './utils/sanitize';
 
 // Elements
-const form = document.getElementById('tzv-options-form');
-const tabButtons = document.querySelectorAll('.tzv-tab-btn');
-const tabPanes = document.querySelectorAll('.tzv-tab-pane');
+const form = document.getElementById('tzv-options-form') as HTMLFormElement;
+const tabButtons = document.querySelectorAll<HTMLButtonElement>('.tzv-tab-btn');
+const tabPanes = document.querySelectorAll<HTMLElement>('.tzv-tab-pane');
 
 // Tab 1: AI Service Inputs & Profile Manager
-const endpointsGrid = document.getElementById('endpoints-grid');
-const btnAddEndpoint = document.getElementById('btn-add-endpoint');
-const btnActivateSelected = document.getElementById('btn-activate-selected');
-const btnDeleteEndpoint = document.getElementById('btn-delete-endpoint');
-const editorSectionTitle = document.getElementById('editor-section-title');
+const endpointsGrid = document.getElementById('endpoints-grid') as HTMLElement | null;
+const btnAddEndpoint = document.getElementById('btn-add-endpoint') as HTMLButtonElement;
+const btnActivateSelected = document.getElementById('btn-activate-selected') as HTMLButtonElement;
+const btnDeleteEndpoint = document.getElementById('btn-delete-endpoint') as HTMLButtonElement;
+const editorSectionTitle = document.getElementById('editor-section-title') as HTMLElement;
 
-const endpointNameInput = document.getElementById('endpointName');
-const endpointInput = document.getElementById('endpoint');
-const modelInput = document.getElementById('model');
-const apiKeyInput = document.getElementById('apiKey');
-const temperatureInput = document.getElementById('temperature');
-const btnTestConnection = document.getElementById('btn-test-connection');
-const testStatusSpan = document.getElementById('test-connection-status');
+const endpointNameInput = document.getElementById('endpointName') as HTMLInputElement;
+const endpointInput = document.getElementById('endpoint') as HTMLInputElement;
+const modelInput = document.getElementById('model') as HTMLInputElement;
+const apiKeyInput = document.getElementById('apiKey') as HTMLInputElement;
+const temperatureInput = document.getElementById('temperature') as HTMLInputElement;
+const btnTestConnection = document.getElementById('btn-test-connection') as HTMLButtonElement;
+const testStatusSpan = document.getElementById('test-connection-status') as HTMLElement;
 
 // Local multi-endpoint state
-let endpointsList = [];
+let endpointsList: EndpointProfile[] = [];
 let activeEndpointId = 'ep-local';
 let editingEndpointId = 'ep-local';
 
 // Tab 2: Appearance Inputs & Preview
-const previewWindow = document.getElementById('tzv-preview-window');
+const previewWindow = document.getElementById('tzv-preview-window') as HTMLElement | null;
 
-const hudBgColorInput = document.getElementById('hudBgColor');
-const hudBgColorHex = document.getElementById('hudBgColor-hex');
-const hudOpacityInput = document.getElementById('hudOpacity');
-const hudOpacityVal = document.getElementById('hudOpacity-val');
+const hudBgColorInput = document.getElementById('hudBgColor') as HTMLInputElement;
+const hudBgColorHex = document.getElementById('hudBgColor-hex') as HTMLElement;
+const hudOpacityInput = document.getElementById('hudOpacity') as HTMLInputElement;
+const hudOpacityVal = document.getElementById('hudOpacity-val') as HTMLElement;
 
-const sourceFontSizeInput = document.getElementById('sourceFontSize');
-const sourceFontSizeVal = document.getElementById('sourceFontSize-val');
-const sourceColorInput = document.getElementById('sourceColor');
-const sourceColorHex = document.getElementById('sourceColor-hex');
+const sourceFontSizeInput = document.getElementById('sourceFontSize') as HTMLInputElement;
+const sourceFontSizeVal = document.getElementById('sourceFontSize-val') as HTMLElement;
+const sourceColorInput = document.getElementById('sourceColor') as HTMLInputElement;
+const sourceColorHex = document.getElementById('sourceColor-hex') as HTMLElement;
 
-const furiganaFontSizeInput = document.getElementById('furiganaFontSize');
-const furiganaFontSizeVal = document.getElementById('furiganaFontSize-val');
-const furiganaColorInput = document.getElementById('furiganaColor');
-const furiganaColorHex = document.getElementById('furiganaColor-hex');
+const furiganaFontSizeInput = document.getElementById('furiganaFontSize') as HTMLInputElement;
+const furiganaFontSizeVal = document.getElementById('furiganaFontSize-val') as HTMLElement;
+const furiganaColorInput = document.getElementById('furiganaColor') as HTMLInputElement;
+const furiganaColorHex = document.getElementById('furiganaColor-hex') as HTMLElement;
 
-const targetFontSizeInput = document.getElementById('targetFontSize');
-const targetFontSizeVal = document.getElementById('targetFontSize-val');
-const targetColorInput = document.getElementById('targetColor');
-const targetColorHex = document.getElementById('targetColor-hex');
+const targetFontSizeInput = document.getElementById('targetFontSize') as HTMLInputElement;
+const targetFontSizeVal = document.getElementById('targetFontSize-val') as HTMLElement;
+const targetColorInput = document.getElementById('targetColor') as HTMLInputElement;
+const targetColorHex = document.getElementById('targetColor-hex') as HTMLElement;
 
 // Tab 3: Translation Inputs
-const targetLanguageSelect = document.getElementById('targetLanguage');
-const systemPromptInput = document.getElementById('systemPrompt');
-const userPromptTemplateInput = document.getElementById('userPromptTemplate');
+const targetLanguageSelect = document.getElementById('targetLanguage') as HTMLSelectElement;
+const systemPromptInput = document.getElementById('systemPrompt') as HTMLTextAreaElement;
+const userPromptTemplateInput = document.getElementById('userPromptTemplate') as HTMLTextAreaElement;
 
 // Actions
-const btnResetDefaults = document.getElementById('btn-reset-defaults');
-const saveStatusMsg = document.getElementById('save-status-msg');
-
-/**
- * Converts a 3-hex or 6-hex color code to RGB components
- */
-function hexToRgb(hex) {
-  if (!hex) return { r: 10, g: 14, b: 22 };
-  let clean = hex.replace('#', '');
-  if (clean.length === 3) {
-    clean = clean.split('').map((c) => c + c).join('');
-  }
-  const num = parseInt(clean, 16);
-  if (isNaN(num)) return { r: 10, g: 14, b: 22 };
-  return {
-    r: (num >> 16) & 255,
-    g: (num >> 8) & 255,
-    b: num & 255
-  };
-}
+const btnResetDefaults = document.getElementById('btn-reset-defaults') as HTMLButtonElement;
+const saveStatusMsg = document.getElementById('save-status-msg') as HTMLElement;
 
 /**
  * Updates the in-page live interactive preview with the current theme settings
  */
-function updateLivePreview() {
+function updateLivePreview(): void {
   const hex = hudBgColorInput.value || '#0a0e16';
   const opacity = parseInt(hudOpacityInput.value, 10) / 100;
   const rgb = hexToRgb(hex);
@@ -100,7 +91,7 @@ function updateLivePreview() {
   targetColorHex.innerText = targetColorInput.value.toUpperCase();
 
   // Read selected effect
-  const selectedEffect = form.querySelector('input[name="hudEffect"]:checked')?.value || 'translucent';
+  const selectedEffect = (form.querySelector('input[name="hudEffect"]:checked') as HTMLInputElement | null)?.value || 'translucent';
 
   let bgValue = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${opacity})`;
   let backdropFilter = 'none';
@@ -119,7 +110,7 @@ function updateLivePreview() {
   if (previewWindow) {
     previewWindow.style.background = bgValue;
     previewWindow.style.backdropFilter = backdropFilter;
-    previewWindow.style.webkitBackdropFilter = backdropFilter;
+    previewWindow.style.setProperty('-webkit-backdrop-filter', backdropFilter);
 
     // Set CSS custom properties on preview window container
     previewWindow.style.setProperty('--tzv-source-size', `${sourceFontSizeInput.value}px`);
@@ -130,26 +121,26 @@ function updateLivePreview() {
     previewWindow.style.setProperty('--tzv-target-color', targetColorInput.value);
 
     // Apply directly with important priority to override any CSS specificity
-    const allSources = previewWindow.querySelectorAll('.tzv-pair-source');
+    const allSources = previewWindow.querySelectorAll<HTMLElement>('.tzv-pair-source');
     allSources.forEach((el) => {
       el.style.setProperty('font-size', `${sourceFontSizeInput.value}px`, 'important');
       el.style.setProperty('color', sourceColorInput.value, 'important');
     });
 
-    const allPhonetics = previewWindow.querySelectorAll('.tzv-pair-phonetic');
+    const allPhonetics = previewWindow.querySelectorAll<HTMLElement>('.tzv-pair-phonetic');
     allPhonetics.forEach((el) => {
       el.style.setProperty('font-size', `${furiganaFontSizeInput.value}px`, 'important');
       el.style.setProperty('color', furiganaColorInput.value, 'important');
     });
 
-    const allTargets = previewWindow.querySelectorAll('.tzv-pair-target');
+    const allTargets = previewWindow.querySelectorAll<HTMLElement>('.tzv-pair-target');
     allTargets.forEach((el) => {
       el.style.setProperty('font-size', `${targetFontSizeInput.value}px`, 'important');
       el.style.setProperty('color', targetColorInput.value, 'important');
     });
 
     // Update preview based on selected learning mode
-    const selectedMode = form.querySelector('input[name="learningMode"]:checked')?.value || 'bilingual';
+    const selectedMode = (form.querySelector('input[name="learningMode"]:checked') as HTMLInputElement | null)?.value || 'bilingual';
     const phoEl = document.getElementById('preview-phonetic-line');
     const vocabEl = document.getElementById('preview-vocab-card');
     const srcEl = document.getElementById('preview-source-line');
@@ -173,7 +164,7 @@ function updateLivePreview() {
 /**
  * Initializes Tab navigation listeners
  */
-function initTabs() {
+function initTabs(): void {
   tabButtons.forEach((btn) => {
     btn.addEventListener('click', () => {
       const tabKey = btn.getAttribute('data-tab');
@@ -191,22 +182,9 @@ function initTabs() {
 }
 
 /**
- * Safely escapes HTML strings for DOM rendering
- */
-function escapeHtml(str) {
-  if (!str) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
-
-/**
  * Saves current form inputs into the currently active editing profile in state
  */
-function saveCurrentEditingEndpointToState() {
+function saveCurrentEditingEndpointToState(): void {
   const current = endpointsList.find((e) => e.id === editingEndpointId);
   if (current) {
     current.name = endpointNameInput.value.trim() || 'Untitled Endpoint';
@@ -220,13 +198,13 @@ function saveCurrentEditingEndpointToState() {
 /**
  * Populates the Tab 1 editor form with a selected profile
  */
-function populateEditorForm(profile) {
+function populateEditorForm(profile?: EndpointProfile): void {
   if (!profile) return;
   endpointNameInput.value = profile.name || '';
   endpointInput.value = profile.endpoint || '';
   modelInput.value = profile.model || '';
   apiKeyInput.value = profile.apiKey || '';
-  temperatureInput.value = typeof profile.temperature === 'number' ? profile.temperature : 0.2;
+  temperatureInput.value = typeof profile.temperature === 'number' ? String(profile.temperature) : '0.2';
 
   editorSectionTitle.innerText = `Edit: ${profile.name || 'Endpoint Profile'}`;
 
@@ -249,7 +227,7 @@ function populateEditorForm(profile) {
 /**
  * Renders the endpoint profiles list as interactive cards
  */
-function renderEndpointsGrid() {
+function renderEndpointsGrid(): void {
   if (!endpointsGrid) return;
   endpointsGrid.innerHTML = '';
 
@@ -284,11 +262,11 @@ function renderEndpointsGrid() {
 /**
  * Adds a new endpoint profile and selects it for editing
  */
-function handleAddEndpoint() {
+function handleAddEndpoint(): void {
   saveCurrentEditingEndpointToState();
 
   const newId = `ep-${Date.now()}`;
-  const newProfile = {
+  const newProfile: EndpointProfile = {
     id: newId,
     name: `Custom Endpoint ${endpointsList.length + 1}`,
     endpoint: 'http://127.0.0.1:11434/v1',
@@ -307,7 +285,7 @@ function handleAddEndpoint() {
 /**
  * Deletes the currently selected endpoint profile
  */
-function handleDeleteEndpoint() {
+function handleDeleteEndpoint(): void {
   if (endpointsList.length <= 1) {
     alert('At least one AI endpoint profile must be maintained.');
     return;
@@ -321,9 +299,9 @@ function handleDeleteEndpoint() {
 
   endpointsList = endpointsList.filter((e) => e.id !== editingEndpointId);
   if (activeEndpointId === editingEndpointId) {
-    activeEndpointId = endpointsList[0].id;
+    activeEndpointId = endpointsList[0]?.id || 'ep-local';
   }
-  editingEndpointId = endpointsList[0].id;
+  editingEndpointId = endpointsList[0]?.id || 'ep-local';
   populateEditorForm(endpointsList[0]);
   renderEndpointsGrid();
 }
@@ -331,7 +309,7 @@ function handleDeleteEndpoint() {
 /**
  * Activates the currently edited profile
  */
-function handleActivateSelected() {
+function handleActivateSelected(): void {
   saveCurrentEditingEndpointToState();
   activeEndpointId = editingEndpointId;
   populateEditorForm(endpointsList.find((e) => e.id === editingEndpointId));
@@ -341,10 +319,10 @@ function handleActivateSelected() {
 /**
  * Loads and populates options form from storage
  */
-async function loadStoredOptions() {
+async function loadStoredOptions(): Promise<void> {
   try {
-    const stored = await chrome.storage.local.get(null);
-    const config = {
+    const stored = (await chrome.storage.local.get(null)) as Partial<AppConfig>;
+    const config: AppConfig = {
       ...DEFAULT_CONFIG,
       ...stored,
       hudTheme: {
@@ -356,9 +334,9 @@ async function loadStoredOptions() {
     // Tab 1: AI Service Profiles
     let loadedEndpoints = config.endpoints;
     if (!Array.isArray(loadedEndpoints) || loadedEndpoints.length === 0) {
-      loadedEndpoints = DEFAULT_CONFIG.endpoints;
+      loadedEndpoints = [...DEFAULT_CONFIG.endpoints];
     }
-    endpointsList = JSON.parse(JSON.stringify(loadedEndpoints));
+    endpointsList = JSON.parse(JSON.stringify(loadedEndpoints)) as EndpointProfile[];
     activeEndpointId = config.activeEndpointId || endpointsList[0]?.id || 'ep-local';
     editingEndpointId = activeEndpointId;
 
@@ -368,21 +346,21 @@ async function loadStoredOptions() {
 
     // Tab 2: Appearance & Theme
     const theme = config.hudTheme || DEFAULT_CONFIG.hudTheme;
-    const effectRadio = form.querySelector(`input[name="hudEffect"][value="${theme.hudEffect || 'translucent'}"]`);
+    const effectRadio = form.querySelector<HTMLInputElement>(`input[name="hudEffect"][value="${theme.hudEffect || 'translucent'}"]`);
     if (effectRadio) {
       effectRadio.checked = true;
     }
 
     hudBgColorInput.value = theme.hudBgColor || DEFAULT_CONFIG.hudTheme.hudBgColor;
-    hudOpacityInput.value = theme.hudOpacity !== undefined ? theme.hudOpacity : DEFAULT_CONFIG.hudTheme.hudOpacity;
+    hudOpacityInput.value = theme.hudOpacity !== undefined ? String(theme.hudOpacity) : String(DEFAULT_CONFIG.hudTheme.hudOpacity);
 
-    sourceFontSizeInput.value = theme.sourceFontSize || DEFAULT_CONFIG.hudTheme.sourceFontSize;
+    sourceFontSizeInput.value = theme.sourceFontSize ? String(theme.sourceFontSize) : String(DEFAULT_CONFIG.hudTheme.sourceFontSize);
     sourceColorInput.value = theme.sourceColor || DEFAULT_CONFIG.hudTheme.sourceColor;
 
-    furiganaFontSizeInput.value = theme.furiganaFontSize || DEFAULT_CONFIG.hudTheme.furiganaFontSize;
+    furiganaFontSizeInput.value = theme.furiganaFontSize ? String(theme.furiganaFontSize) : String(DEFAULT_CONFIG.hudTheme.furiganaFontSize);
     furiganaColorInput.value = theme.furiganaColor || DEFAULT_CONFIG.hudTheme.furiganaColor;
 
-    targetFontSizeInput.value = theme.targetFontSize || DEFAULT_CONFIG.hudTheme.targetFontSize;
+    targetFontSizeInput.value = theme.targetFontSize ? String(theme.targetFontSize) : String(DEFAULT_CONFIG.hudTheme.targetFontSize);
     targetColorInput.value = theme.targetColor || DEFAULT_CONFIG.hudTheme.targetColor;
 
     // Tab 3: Translation
@@ -390,7 +368,7 @@ async function loadStoredOptions() {
       targetLanguageSelect.value = config.targetLanguage;
     }
 
-    const modeRadio = form.querySelector(`input[name="learningMode"][value="${config.learningMode || 'bilingual'}"]`);
+    const modeRadio = form.querySelector<HTMLInputElement>(`input[name="learningMode"][value="${config.learningMode || 'bilingual'}"]`);
     if (modeRadio) {
       modeRadio.checked = true;
     }
@@ -407,16 +385,16 @@ async function loadStoredOptions() {
 /**
  * Saves options form values to chrome.storage.local
  */
-async function handleSaveOptions(e) {
+async function handleSaveOptions(e: Event): Promise<void> {
   e.preventDefault();
 
   saveCurrentEditingEndpointToState();
 
-  const selectedMode = form.querySelector('input[name="learningMode"]:checked')?.value || 'bilingual';
-  const selectedEffect = form.querySelector('input[name="hudEffect"]:checked')?.value || 'translucent';
+  const selectedMode = (form.querySelector('input[name="learningMode"]:checked') as HTMLInputElement | null)?.value as LearningMode || 'bilingual';
+  const selectedEffect = (form.querySelector('input[name="hudEffect"]:checked') as HTMLInputElement | null)?.value as HudEffect || 'translucent';
   const activeProfile = endpointsList.find((e) => e.id === activeEndpointId) || endpointsList[0];
 
-  const updatedConfig = {
+  const updatedConfig: Partial<AppConfig> = {
     endpoints: endpointsList,
     activeEndpointId: activeEndpointId,
     // Active resolved credentials for fallback compatibility
@@ -450,28 +428,34 @@ async function handleSaveOptions(e) {
       saveStatusMsg.classList.remove('tzv-show');
     }, 2500);
   } catch (err) {
-    alert(`Failed to save settings: ${err.message}`);
+    const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+    alert(`Failed to save settings: ${errorMsg}`);
   }
 }
 
 /**
  * Tests live connection to the configured OpenAI-compatible endpoint
  */
-async function handleTestConnection() {
+async function handleTestConnection(): Promise<void> {
   testStatusSpan.style.color = '#94a3b8';
   testStatusSpan.innerText = 'Pinging endpoint...';
 
-  const testConfig = {
+  const testProfile: EndpointProfile = {
+    id: editingEndpointId,
+    name: endpointNameInput.value.trim() || 'Test Endpoint',
     endpoint: endpointInput.value.trim() || DEFAULT_CONFIG.endpoint,
     model: modelInput.value.trim() || DEFAULT_CONFIG.model,
-    apiKey: apiKeyInput.value.trim()
+    apiKey: apiKeyInput.value.trim(),
+    temperature: parseFloat(temperatureInput.value) || 0.2
   };
 
   try {
-    const response = await chrome.runtime.sendMessage({
+    const message: ExtensionMessage = {
       type: 'TEST_CONNECTION',
-      config: testConfig
-    });
+      config: testProfile
+    };
+
+    const response = (await chrome.runtime.sendMessage(message)) as TestConnectionResponse;
 
     if (response?.success) {
       testStatusSpan.style.color = '#10b981';
@@ -481,15 +465,16 @@ async function handleTestConnection() {
       testStatusSpan.innerText = `❌ Error: ${response?.error || 'Connection failed'}`;
     }
   } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : 'Unknown error';
     testStatusSpan.style.color = '#ef4444';
-    testStatusSpan.innerText = `❌ Request failed: ${err.message}`;
+    testStatusSpan.innerText = `❌ Request failed: ${errorMsg}`;
   }
 }
 
 /**
  * Resets all settings to factory defaults
  */
-async function handleResetDefaults() {
+async function handleResetDefaults(): Promise<void> {
   if (!confirm('Are you sure you want to reset all configuration settings to factory defaults?')) {
     return;
   }
@@ -504,7 +489,8 @@ async function handleResetDefaults() {
       saveStatusMsg.classList.remove('tzv-show');
     }, 2500);
   } catch (err) {
-    alert(`Failed to reset defaults: ${err.message}`);
+    const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+    alert(`Failed to reset defaults: ${errorMsg}`);
   }
 }
 
@@ -552,4 +538,3 @@ btnResetDefaults.addEventListener('click', handleResetDefaults);
 // Initialize
 initTabs();
 document.addEventListener('DOMContentLoaded', loadStoredOptions);
-

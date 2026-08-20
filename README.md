@@ -4,6 +4,7 @@
   <p><strong>Translate on-screen text, game dialogue, and visual text from any web video.</strong></p>
   <p>
     <a href="https://developer.chrome.com/docs/extensions/mv3/intro/"><img src="https://img.shields.io/badge/Manifest-V3-6366f1.svg" alt="Manifest V3"></a>
+    <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-5.7-3178c6.svg" alt="TypeScript"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
     <a href="https://www.google.com/chrome/"><img src="https://img.shields.io/badge/Platform-Chromium-38bdf8.svg" alt="Platform: Chrome / Edge / Brave"></a>
   </p>
@@ -54,30 +55,50 @@ Translating foreign video games has always been notoriously difficult because di
 
 ## Features
 
-- **AI Vision-Powered OCR & Translation:** Transcribes and translates visual text, game dialogue, on-screen signs, and lecture slides directly from video frames without requiring pre-existing subtitle tracks.
-- **Dedicated Language Learning Modes:**
-  - **Bilingual Pair:** Displays interleaved source text and target translations side-by-side.
-  - **Japanese Furigana:** Extracts Hiragana pronunciation readings with natural word spacing for Japanese learners.
-  - **Vocabulary Breakdown:** Automatically generates a concise glossary of key terms, verbs, and idioms extracted from dialogue.
-  - **Target Only:** Clean, immersion-style single translation display.
-- **Multiple AI Endpoints & Instant Switching:** Configure and manage multiple AI provider profiles (Local Ollama / vLLM, Google Gemini, OpenAI Direct, OpenRouter) and switch active backends on the fly directly from the toolbar popup.
-- **Customizable Appearance & Themes:** Personalize your HUD with visual effects (**Frosted Glass / Glassmorphism**, **Translucent**, **Opaque**, **Glow**), customizable background opacity, and independent font size and color controls for Source (`#38BDF8`), Furigana (`#FBBF24`), and Target (`#FFFFFF`) text.
-- **Tailored Prompt Orchestration:** Customize system and user prompts to adapt translations to your specific demands—tune for colloquial video slang, gaming terminology, technical jargon, or custom formatting.
-- **Intelligent Video-Aware HUD:** Automatically attaches to active video streams on YouTube, Bilibili, and other web players, auto-pauses during translation, and automatically refreshes when navigating between videos.
+- **Translate Any On-Screen Text:** Reads words directly from the video — no subtitle files needed. Works on game dialogue, anime, tutorial slides, and signs.
+- **4 Helpful Learning Modes:**
+  - **Bilingual:** Shows the original sentence and translation together.
+  - **Japanese Furigana:** Adds Hiragana pronunciation readings for Japanese text.
+  - **Vocabulary Cards:** Breaks down key words and phrases with simple explanations.
+  - **Translation Only:** A clean view showing just the translated text.
+- **Floating Translation Window:** A sleek, transparent window on top of your video. Drag it anywhere, resize it, or minimize it into a small button.
+- **Works with Multiple AI Services:** Connect free local tools (like Ollama) or popular AI providers (Gemini, OpenAI, OpenRouter) and switch between them with one click.
+- **Customizable Appearance:** Adjust window transparency, colors, and font sizes to make text easy to read.
+- **Smart & Seamless:** Automatically pauses the video while translating and follows your video into full screen.
 
 ---
 
 ## How to Install
 
+### From Source (Developer Mode)
+
 1. Download or clone this repository to your computer:
    ```bash
    git clone https://github.com/activebook/tranz-video.git
+   cd tranz-video
    ```
-2. In your browser, navigate to `chrome://extensions/` (works on Chrome, Edge, Brave, and other Chromium browsers).
-3. Turn on the **Developer mode** switch in the top-right corner.
-4. Click **Load unpacked** in the top-left corner.
-5. Select the `tranz-video` folder.
-6. Pin **Tranz Video** to your browser toolbar.
+2. Install dependencies and build the extension bundle:
+   ```bash
+   npm install
+   npm run build
+   ```
+   *(For development with live file-watching, run `npm run dev`)*
+3. In your browser, navigate to `chrome://extensions/` (works on Chrome, Edge, Brave, and other Chromium browsers).
+4. Turn on the **Developer mode** switch in the top-right corner.
+5. Click **Load unpacked** in the top-left corner.
+6. Select the **`dist`** directory inside the `tranz-video` repository.
+7. Pin **Tranz Video** to your browser toolbar.
+
+---
+
+## Development Scripts
+
+| Command | Description |
+|---|---|
+| `npm run build` | Builds the production distribution bundles into `dist/`. |
+| `npm run dev` | Watches `src/` and assets, compiling instantaneously into `dist/`. |
+| `npm run type-check` | Executes strict TypeScript static verification (`tsc --noEmit`). |
+| `npm run clean` | Cleans the output `dist/` directory. |
 
 ---
 

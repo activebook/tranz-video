@@ -1,3 +1,10 @@
+# Build artifacts & package archives
+dist/
+node_modules/
+*.zip
+*.tar.gz
+*.crx
+
 # Design & Internal Project Specs
 goal/
 
@@ -38,8 +45,3 @@ scratch/
 # AI Assistant metadata
 .agents/
 .gemini/
-
-# Build artifacts & package archives
-*.zip
-*.tar.gz
-*.crx

@@ -1,0 +1,58 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches-ignore:
+      - main
+    paths-ignore:
+      - 'README.md'
+      - 'LICENSE'
+      - 'images/**'
+      - 'goal/**'
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - 'README.md'
+      - 'LICENSE'
+      - 'images/**'
+      - 'goal/**'
+  workflow_dispatch:
+
+jobs:
+  validate:
+    name: Type Check & Build Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Validate Manifest JSON
+        run: jq empty manifest.json
+
+      - name: Static Type Checking (TypeScript)
+        run: npm run type-check
+
+      - name: Build Production Bundle
+        run: npm run build -- --prod
+
+      - name: Verify Distribution Artifacts
+        run: |
+          test -f dist/manifest.json
+          test -f dist/background.js
+          test -f dist/content.js
+          test -f dist/options.js
+          test -f dist/popup.js
+          test -f dist/styles.css
+          test -d dist/icons
+          echo "✓ All distribution artifacts successfully verified."
