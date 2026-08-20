@@ -40,6 +40,81 @@
   };
 
   /**
+   * Selectors for thumbnail hover preview video containers that must never trigger the HUD
+   */
+  const PREVIEW_CONTAINER_SELECTORS = [
+    // YouTube thumbnail hover previews
+    'ytd-inline-preview-renderer',
+    'ytd-video-preview',
+    'ytd-thumbnail',
+    '#inline-preview-player',
+    '.ytp-inline-preview',
+    // Bilibili feed card hover previews
+    '.bili-video-card__preview',
+    '.bili-feed-card',
+    '.feed-card',
+    '.v-popover-content',
+    // Social / Generic feed previews
+    '.tw-card',
+    '[data-testid="tweetPhoto"]',
+    '[data-testid="preview-player"]',
+    '.feed-video-preview'
+  ];
+
+  /**
+   * Evaluates if the current browser tab represents a dedicated video watching context
+   * versus a home/search/discovery feed.
+   */
+  function isDedicatedVideoPage() {
+    const host = window.location.hostname;
+    const path = window.location.pathname;
+
+    // YouTube
+    if (host.includes('youtube.com')) {
+      if (
+        path.startsWith('/watch') ||
+        path.startsWith('/shorts') ||
+        path.startsWith('/embed') ||
+        path.startsWith('/live')
+      ) {
+        return true;
+      }
+      const mainPlayer = document.querySelector('#movie_player:not(.ytp-inline-preview) video');
+      if (mainPlayer) {
+        const rect = mainPlayer.getBoundingClientRect();
+        if (rect.width >= 360 && rect.height >= 200) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    // Bilibili
+    if (host.includes('bilibili.com')) {
+      if (
+        path.startsWith('/video/') ||
+        path.startsWith('/bangumi/play/') ||
+        path.startsWith('/medialist/play/') ||
+        path.startsWith('/festival/') ||
+        path.startsWith('/blackboard/')
+      ) {
+        return true;
+      }
+      const bPlayer = document.querySelector('.bpx-player-video-wrap video, .bilibili-player-video video');
+      if (bPlayer) {
+        const rect = bPlayer.getBoundingClientRect();
+        if (rect.width >= 360 && rect.height >= 200) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    // Generic sites: Allow if a prominent video player exists
+    return true;
+  }
+
+  /**
    * Universal Video Element Discovery Engine
    */
   function findTargetVideo() {
@@ -55,34 +130,59 @@
     document.querySelectorAll('*').forEach(searchShadow);
 
     if (allVideos.length === 0) return null;
-    if (allVideos.length === 1) return allVideos[0];
 
     // Score videos based on playing state, surface area, and viewport visibility
-    const scored = allVideos.map((video) => {
-      const rect = video.getBoundingClientRect();
-      const isVisible =
-        rect.width > 40 &&
-        rect.height > 40 &&
-        rect.bottom > 0 &&
-        rect.right > 0 &&
-        rect.top < window.innerHeight &&
-        rect.left < window.innerWidth;
+    const scored = allVideos
+      .map((video) => {
+        // 1. Immediately reject thumbnail preview containers
+        if (video.classList.contains('ytp-inline-preview')) return null;
+        if (video.closest(PREVIEW_CONTAINER_SELECTORS.join(', '))) return null;
 
-      if (!isVisible) return { video, score: -1 };
+        const rect = video.getBoundingClientRect();
 
-      let score = rect.width * rect.height;
-      if (!video.paused && !video.ended && video.readyState > 2) {
-        score += 10000000; // Priority to actively playing stream
-      }
+        // 2. Enforce minimum dimensional threshold to eliminate thumbnail badges & ads
+        const minWidth = 280;
+        const minHeight = 150;
+        if (rect.width < minWidth || rect.height < minHeight) {
+          return null;
+        }
 
-      // Bonus for center proximity
-      const centerX = rect.left + rect.width / 2;
-      const centerY = rect.top + rect.height / 2;
-      const distFromCenter = Math.hypot(centerX - window.innerWidth / 2, centerY - window.innerHeight / 2);
-      score -= distFromCenter * 10;
+        // 3. Viewport and visibility checks
+        const isVisibleInViewport =
+          rect.bottom > 0 &&
+          rect.right > 0 &&
+          rect.top < window.innerHeight &&
+          rect.left < window.innerWidth;
 
-      return { video, score };
-    });
+        if (!isVisibleInViewport) return null;
+
+        // Check computed visibility
+        try {
+          const style = window.getComputedStyle(video);
+          if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') {
+            return null;
+          }
+        } catch (e) {}
+
+        // Base score: surface area
+        let score = rect.width * rect.height;
+
+        // Priority to actively playing primary video
+        if (!video.paused && !video.ended && video.readyState > 2) {
+          score += 1000000;
+        }
+
+        // Proximity to viewport center
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        const distFromCenter = Math.hypot(centerX - window.innerWidth / 2, centerY - window.innerHeight / 2);
+        score -= distFromCenter * 10;
+
+        return { video, score };
+      })
+      .filter(Boolean);
+
+    if (scored.length === 0) return null;
 
     scored.sort((a, b) => b.score - a.score);
     return scored[0]?.score > 0 ? scored[0].video : null;
@@ -268,6 +368,12 @@
    */
   function syncVideoPresence(forceShow = false) {
     if (currentConfig?.extensionEnabled === false) {
+      if (hudRoot) hudRoot.style.display = 'none';
+      return;
+    }
+
+    // On YouTube / Bilibili feed pages (e.g. Home, Search), do not auto-display HUD unless explicitly triggered by user
+    if (!forceShow && !isDedicatedVideoPage()) {
       if (hudRoot) hudRoot.style.display = 'none';
       return;
     }
@@ -979,31 +1085,16 @@
   // Handle SPA (Single Page App) navigations (e.g. YouTube, Bilibili)
   window.addEventListener('yt-navigate-finish', () => {
     resetHudContent();
-    setTimeout(() => syncVideoPresence(false), 400);
+    setTimeout(() => syncVideoPresence(false), 300);
   });
   window.addEventListener('yt-page-data-updated', () => {
     resetHudContent();
-    setTimeout(() => syncVideoPresence(false), 400);
+    setTimeout(() => syncVideoPresence(false), 300);
   });
   window.addEventListener('popstate', () => {
     resetHudContent();
-    setTimeout(() => syncVideoPresence(false), 400);
+    setTimeout(() => syncVideoPresence(false), 300);
   });
-
-  // Watch for media play/loadstart events across video streams
-  document.addEventListener('loadstart', (e) => {
-    if (e.target?.tagName === 'VIDEO') {
-      checkAndHandleVideoChange(e.target);
-      syncVideoPresence(false);
-    }
-  }, true);
-
-  document.addEventListener('play', (e) => {
-    if (e.target?.tagName === 'VIDEO') {
-      checkAndHandleVideoChange(e.target);
-      syncVideoPresence(false);
-    }
-  }, true);
 
   // Dynamic MutationObserver to detect late-mounted or asynchronously hydrated <video> elements
   let videoObserver = null;
@@ -1015,7 +1106,7 @@
         clearTimeout(mutationDebounce);
         mutationDebounce = setTimeout(() => {
           syncVideoPresence(false);
-        }, 300);
+        }, 350);
       });
 
       videoObserver.observe(document.documentElement || document.body, {
