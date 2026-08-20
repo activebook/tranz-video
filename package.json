@@ -1,6 +1,6 @@
 {
   "name": "tranz-video",
-  "version": "1.0.11",
+  "version": "1.0.12",
   "description": "Translate on-screen text, game dialogue, and visual text from any web video using AI vision.",
   "type": "module",
   "scripts": {
