@@ -48,11 +48,9 @@ Translating foreign video games has always been notoriously difficult because di
 
 ## More Screenshots & Use Cases
 
-### 🎙️ Video Podcasts, Shows & Anime
-![Video Podcast Translation](images/jap_podcast.png)
-
-### 📄 Presentations, Whitepapers & Technical Slides
-![Document Translation](images/jap_paper.png)
+| 🎙️ Video Podcasts, Shows & Anime | 📄 Presentations & Technical Slides |
+| :---: | :---: |
+| ![Video Podcast Translation](images/jap_podcast.png) | ![Document Translation](images/jap_paper.png) |
 
 ---
 
