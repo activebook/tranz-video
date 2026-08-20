@@ -3,6 +3,24 @@
  * Injected Content Script (DOM Layer, Video Detector, Translucent HUD, Paired Lexer)
  */
 
+import type { AppConfig, HudThemeConfig, WindowGeometry } from './types/config';
+import type {
+  CaptureFrameResponse,
+  ExtensionMessage,
+  GetConfigResponse,
+  TabActionMessage,
+  TranslateImageResponse
+} from './types/messages';
+import type { ParsedModelOutput, TranslationPair } from './types/translation';
+import { hexToRgb } from './utils/colors';
+import { escapeHtml, stripReasoningTags } from './utils/sanitize';
+
+declare global {
+  interface Window {
+    __TRANZ_VIDEO_LOADED__?: boolean;
+  }
+}
+
 (function () {
   // 1. Guard against iframe clutter: only run in top window or standalone embed players
   const isTopFrame = window === window.top;
@@ -19,17 +37,17 @@
   if (window.__TRANZ_VIDEO_LOADED__) return;
   window.__TRANZ_VIDEO_LOADED__ = true;
 
-  let currentConfig = null;
-  let hudRoot = null;
-  let windowEl = null;
-  let pillEl = null;
+  let currentConfig: AppConfig | null = null;
+  let hudRoot: HTMLDivElement | null = null;
+  let windowEl: HTMLDivElement | null = null;
+  let pillEl: HTMLDivElement | null = null;
   let isTranslating = false;
   let hasUserMovedWindow = false;
   let lastTrackedUrl = window.location.href;
   let lastTrackedVideoSrc = '';
 
   // Window geometry state
-  let state = {
+  const state: WindowGeometry = {
     x: 32,
     y: 80,
     width: 440,
@@ -42,7 +60,7 @@
   /**
    * Selectors for thumbnail hover preview video containers that must never trigger the HUD
    */
-  const PREVIEW_CONTAINER_SELECTORS = [
+  const PREVIEW_CONTAINER_SELECTORS: readonly string[] = [
     // YouTube thumbnail hover previews
     'ytd-inline-preview-renderer',
     'ytd-video-preview',
@@ -65,7 +83,7 @@
    * Evaluates if the current browser tab represents a dedicated video watching context
    * versus a home/search/discovery feed.
    */
-  function isDedicatedVideoPage() {
+  function isDedicatedVideoPage(): boolean {
     const host = window.location.hostname;
     const path = window.location.pathname;
 
@@ -79,7 +97,9 @@
       ) {
         return true;
       }
-      const mainPlayer = document.querySelector('#movie_player:not(.ytp-inline-preview) video');
+      const mainPlayer = document.querySelector<HTMLVideoElement>(
+        '#movie_player:not(.ytp-inline-preview) video'
+      );
       if (mainPlayer) {
         const rect = mainPlayer.getBoundingClientRect();
         if (rect.width >= 360 && rect.height >= 200) {
@@ -100,7 +120,9 @@
       ) {
         return true;
       }
-      const bPlayer = document.querySelector('.bpx-player-video-wrap video, .bilibili-player-video video');
+      const bPlayer = document.querySelector<HTMLVideoElement>(
+        '.bpx-player-video-wrap video, .bilibili-player-video video'
+      );
       if (bPlayer) {
         const rect = bPlayer.getBoundingClientRect();
         if (rect.width >= 360 && rect.height >= 200) {
@@ -117,13 +139,13 @@
   /**
    * Universal Video Element Discovery Engine
    */
-  function findTargetVideo() {
-    const allVideos = Array.from(document.querySelectorAll('video'));
+  function findTargetVideo(): HTMLVideoElement | null {
+    const allVideos = Array.from(document.querySelectorAll<HTMLVideoElement>('video'));
 
     // Also check open shadow roots if present
-    function searchShadow(node) {
+    function searchShadow(node: Element): void {
       if (node.shadowRoot) {
-        allVideos.push(...Array.from(node.shadowRoot.querySelectorAll('video')));
+        allVideos.push(...Array.from(node.shadowRoot.querySelectorAll<HTMLVideoElement>('video')));
         node.shadowRoot.querySelectorAll('*').forEach(searchShadow);
       }
     }
@@ -131,9 +153,14 @@
 
     if (allVideos.length === 0) return null;
 
+    interface ScoredVideo {
+      video: HTMLVideoElement;
+      score: number;
+    }
+
     // Score videos based on playing state, surface area, and viewport visibility
-    const scored = allVideos
-      .map((video) => {
+    const scored: ScoredVideo[] = allVideos
+      .map((video): ScoredVideo | null => {
         // 1. Immediately reject thumbnail preview containers
         if (video.classList.contains('ytp-inline-preview')) return null;
         if (video.closest(PREVIEW_CONTAINER_SELECTORS.join(', '))) return null;
@@ -162,7 +189,9 @@
           if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') {
             return null;
           }
-        } catch (e) {}
+        } catch {
+          // Ignore style computation errors
+        }
 
         // Base score: surface area
         let score = rect.width * rect.height;
@@ -175,26 +204,31 @@
         // Proximity to viewport center
         const centerX = rect.left + rect.width / 2;
         const centerY = rect.top + rect.height / 2;
-        const distFromCenter = Math.hypot(centerX - window.innerWidth / 2, centerY - window.innerHeight / 2);
+        const distFromCenter = Math.hypot(
+          centerX - window.innerWidth / 2,
+          centerY - window.innerHeight / 2
+        );
         score -= distFromCenter * 10;
 
         return { video, score };
       })
-      .filter(Boolean);
+      .filter((v): v is ScoredVideo => v !== null);
 
     if (scored.length === 0) return null;
 
     scored.sort((a, b) => b.score - a.score);
-    return scored[0]?.score > 0 ? scored[0].video : null;
+    const topScored = scored[0];
+    return topScored && topScored.score > 0 ? topScored.video : null;
   }
 
   /**
    * Initializes and synchronizes configuration from background worker
    */
-  async function loadConfig() {
+  async function loadConfig(): Promise<void> {
     if (!chrome.runtime?.id) return;
     try {
-      const response = await chrome.runtime.sendMessage({ type: 'GET_CONFIG' });
+      const getMsg: ExtensionMessage = { type: 'GET_CONFIG' };
+      const response = (await chrome.runtime.sendMessage(getMsg)) as GetConfigResponse;
       if (response?.success && response.config) {
         currentConfig = response.config;
         if (currentConfig.windowGeometry) {
@@ -235,39 +269,22 @@
   }
 
   /**
-   * Converts a 3-hex or 6-hex color code to RGB components
-   */
-  function hexToRgb(hex) {
-    if (!hex) return { r: 10, g: 14, b: 22 };
-    let clean = hex.replace('#', '');
-    if (clean.length === 3) {
-      clean = clean.split('').map((c) => c + c).join('');
-    }
-    const num = parseInt(clean, 16);
-    if (isNaN(num)) return { r: 10, g: 14, b: 22 };
-    return {
-      r: (num >> 16) & 255,
-      g: (num >> 8) & 255,
-      b: num & 255
-    };
-  }
-
-  /**
    * Dynamically applies HUD appearance theme (background, opacity, blur, text colors & sizes)
    */
-  function applyHudTheme(theme) {
+  function applyHudTheme(theme?: HudThemeConfig): void {
     if (!windowEl) return;
-    const cfg = theme || currentConfig?.hudTheme || {
-      sourceFontSize: 18,
-      sourceColor: '#38bdf8',
-      furiganaFontSize: 16,
-      furiganaColor: '#fbbf24',
-      targetFontSize: 14,
-      targetColor: '#ffffff',
-      hudBgColor: '#0a0e16',
-      hudOpacity: 88,
-      hudEffect: 'translucent'
-    };
+    const cfg: HudThemeConfig = theme ||
+      currentConfig?.hudTheme || {
+        sourceFontSize: 18,
+        sourceColor: '#38bdf8',
+        furiganaFontSize: 16,
+        furiganaColor: '#fbbf24',
+        targetFontSize: 14,
+        targetColor: '#ffffff',
+        hudBgColor: '#0a0e16',
+        hudOpacity: 88,
+        hudEffect: 'translucent'
+      };
 
     const hex = cfg.hudBgColor || '#0a0e16';
     const opacity = (typeof cfg.hudOpacity === 'number' ? cfg.hudOpacity : 88) / 100;
@@ -278,7 +295,7 @@
 
     if (cfg.hudEffect === 'glassmorphism') {
       backdropFilter = 'blur(12px) saturate(180%)';
-      bgValue = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${Math.min(0.80, Number((opacity * 0.85).toFixed(2)))})`;
+      bgValue = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${Math.min(0.8, Number((opacity * 0.85).toFixed(2)))})`;
     } else if (cfg.hudEffect === 'opaque') {
       bgValue = `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
       backdropFilter = 'none';
@@ -300,13 +317,13 @@
   /**
    * Persists geometry state to storage
    */
-  let saveTimeout = null;
-  function persistState() {
+  let saveTimeout: ReturnType<typeof setTimeout> | null = null;
+  function persistState(): void {
     if (!chrome.runtime?.id) return;
-    clearTimeout(saveTimeout);
+    if (saveTimeout !== null) clearTimeout(saveTimeout);
     saveTimeout = setTimeout(() => {
       if (!chrome.runtime?.id) return;
-      chrome.runtime.sendMessage({
+      const saveMsg: ExtensionMessage = {
         type: 'SAVE_CONFIG',
         config: {
           windowGeometry: {
@@ -319,16 +336,17 @@
             isVisible: true
           }
         }
-      }).catch(() => {});
+      };
+      chrome.runtime.sendMessage(saveMsg).catch(() => {});
     }, 400);
   }
 
   /**
    * Resets HUD display content and status banner to the pristine initial state
    */
-  function resetHudContent() {
+  function resetHudContent(): void {
     if (!windowEl) return;
-    const bodyContent = windowEl.querySelector('#tzv-body-content');
+    const bodyContent = windowEl.querySelector<HTMLElement>('#tzv-body-content');
     if (bodyContent) {
       bodyContent.innerHTML = `
         <div class="tzv-loading-state" id="tzv-empty-state">
@@ -343,9 +361,9 @@
    * Detects whether the user has navigated to another video or switched media streams,
    * and clears previous messages if a transition has occurred.
    */
-  function checkAndHandleVideoChange(video) {
+  function checkAndHandleVideoChange(video: HTMLVideoElement | null): void {
     const currentUrl = window.location.href;
-    const currentSrc = video ? (video.currentSrc || video.src || '') : '';
+    const currentSrc = video ? video.currentSrc || video.src || '' : '';
 
     let hasChanged = false;
     if (currentUrl !== lastTrackedUrl) {
@@ -370,7 +388,7 @@
    * Synchronizes overlay visibility with video presence on the active page.
    * On pages without any <video> element (e.g. google.com), the window remains completely hidden.
    */
-  function syncVideoPresence(forceShow = false) {
+  function syncVideoPresence(forceShow = false): void {
     if (currentConfig?.extensionEnabled === false) {
       if (hudRoot) hudRoot.style.display = 'none';
       return;
@@ -397,13 +415,16 @@
   /**
    * Creates or ensures the floating window DOM tree is present in the DOM
    */
-  function ensureHudElements() {
+  function ensureHudElements(): void {
     if (currentConfig?.extensionEnabled === false) {
       if (hudRoot) hudRoot.style.display = 'none';
       return;
     }
 
-    const parentContainer = document.fullscreenElement || document.body || document.documentElement;
+    const parentContainer: HTMLElement | null =
+      (document.fullscreenElement as HTMLElement | null) ||
+      document.body ||
+      document.documentElement;
     if (!parentContainer) return;
 
     if (hudRoot && parentContainer.contains(hudRoot)) {
@@ -479,7 +500,7 @@
   /**
    * Applies position, size, and zoom styling to the window and pill
    */
-  function applyGeometry() {
+  function applyGeometry(): void {
     if (!windowEl || !pillEl) return;
 
     // Viewport boundary constraints
@@ -506,7 +527,9 @@
   /**
    * Attaches interaction handlers (drag, resize, controls)
    */
-  function attachEventListeners() {
+  function attachEventListeners(): void {
+    if (!windowEl || !pillEl) return;
+
     // Window drag from anywhere on the window frame (excluding buttons and resize handle)
     initDrag(windowEl, (dx, dy) => {
       hasUserMovedWindow = true;
@@ -526,36 +549,38 @@
     });
 
     // Corner resize
-    const resizeHandle = windowEl.querySelector('#tzv-resize-handle');
-    initResize(resizeHandle, (dw, dh) => {
-      state.width = Math.max(260, state.width + dw);
-      state.height = Math.max(100, state.height + dh);
-      applyGeometry();
-      persistState();
-    });
+    const resizeHandle = windowEl.querySelector<HTMLElement>('#tzv-resize-handle');
+    if (resizeHandle) {
+      initResize(resizeHandle, (dw, dh) => {
+        state.width = Math.max(260, state.width + dw);
+        state.height = Math.max(100, state.height + dh);
+        applyGeometry();
+        persistState();
+      });
+    }
 
-    windowEl.querySelector('#tzv-btn-close').addEventListener('click', () => {
+    windowEl.querySelector('#tzv-btn-close')?.addEventListener('click', () => {
       state.isMinimized = true;
       applyGeometry();
       persistState();
     });
 
-    windowEl.querySelector('#tzv-btn-copy-all').addEventListener('click', () => {
+    windowEl.querySelector('#tzv-btn-copy-all')?.addEventListener('click', () => {
       copyAllContent();
     });
 
-    windowEl.querySelector('#tzv-btn-translate-action').addEventListener('click', () => {
+    windowEl.querySelector('#tzv-btn-translate-action')?.addEventListener('click', () => {
       handleTranslate();
     });
 
     // Pill controls
-    pillEl.querySelector('#tzv-pill-expand').addEventListener('click', () => {
+    pillEl.querySelector('#tzv-pill-expand')?.addEventListener('click', () => {
       state.isMinimized = false;
       applyGeometry();
       persistState();
     });
 
-    pillEl.querySelector('#tzv-pill-translate').addEventListener('click', () => {
+    pillEl.querySelector('#tzv-pill-translate')?.addEventListener('click', () => {
       handleTranslate();
     });
   }
@@ -563,15 +588,20 @@
   /**
    * Pointer-based smooth dragging helper with threshold to allow clicks and text selection
    */
-  function initDrag(element, onMove) {
+  function initDrag(element: HTMLElement, onMove: (dx: number, dy: number) => void): void {
     let startX = 0;
     let startY = 0;
     let isTracking = false;
     let hasCaptured = false;
 
-    element.addEventListener('pointerdown', (e) => {
+    element.addEventListener('pointerdown', (e: PointerEvent) => {
       // Ignore interactive controls, links, inputs, and resize handle
-      if (e.target.closest('button, a, input, select, textarea, .tzv-resize-handle, [role="button"]')) {
+      const target = e.target as HTMLElement | null;
+      if (
+        target?.closest(
+          'button, a, input, select, textarea, .tzv-resize-handle, [role="button"]'
+        )
+      ) {
         return;
       }
       isTracking = true;
@@ -580,7 +610,7 @@
       startY = e.clientY;
     });
 
-    element.addEventListener('pointermove', (e) => {
+    element.addEventListener('pointermove', (e: PointerEvent) => {
       if (!isTracking) return;
       const dx = e.clientX - startX;
       const dy = e.clientY - startY;
@@ -591,7 +621,9 @@
           hasCaptured = true;
           try {
             element.setPointerCapture(e.pointerId);
-          } catch {}
+          } catch {
+            // Ignore pointer capture errors
+          }
         } else {
           return;
         }
@@ -602,14 +634,16 @@
       onMove(dx, dy);
     });
 
-    const endDrag = (e) => {
+    const endDrag = (e: PointerEvent) => {
       if (!isTracking) return;
       isTracking = false;
       if (hasCaptured) {
         hasCaptured = false;
         try {
           element.releasePointerCapture(e.pointerId);
-        } catch {}
+        } catch {
+          // Ignore pointer release errors
+        }
       }
     };
 
@@ -620,12 +654,12 @@
   /**
    * Pointer-based smooth resizing helper
    */
-  function initResize(handle, onResize) {
+  function initResize(handle: HTMLElement, onResize: (dw: number, dh: number) => void): void {
     let startX = 0;
     let startY = 0;
     let isResizing = false;
 
-    handle.addEventListener('pointerdown', (e) => {
+    handle.addEventListener('pointerdown', (e: PointerEvent) => {
       isResizing = true;
       startX = e.clientX;
       startY = e.clientY;
@@ -634,7 +668,7 @@
       e.stopPropagation();
     });
 
-    handle.addEventListener('pointermove', (e) => {
+    handle.addEventListener('pointermove', (e: PointerEvent) => {
       if (!isResizing) return;
       const dw = e.clientX - startX;
       const dh = e.clientY - startY;
@@ -643,12 +677,14 @@
       onResize(dw, dh);
     });
 
-    const endResize = (e) => {
+    const endResize = (e: PointerEvent) => {
       if (!isResizing) return;
       isResizing = false;
       try {
         handle.releasePointerCapture(e.pointerId);
-      } catch {}
+      } catch {
+        // Ignore pointer release errors
+      }
     };
 
     handle.addEventListener('pointerup', endResize);
@@ -658,8 +694,10 @@
   /**
    * Shows in-window loading state with title and subtitle
    */
-  function showLoadingState(title, subtitle) {
-    const bodyContent = windowEl.querySelector('#tzv-body-content');
+  function showLoadingState(title?: string, subtitle?: string): void {
+    if (!windowEl) return;
+    const bodyContent = windowEl.querySelector<HTMLElement>('#tzv-body-content');
+    if (!bodyContent) return;
     bodyContent.innerHTML = `
       <div class="tzv-loading-state">
         <div class="tzv-spinner"></div>
@@ -670,46 +708,46 @@
   }
 
   /**
-   * Strips reasoning / internal thinking tags output by models (e.g. DeepSeek-R1, Qwen-Thinking, Gemini Thinking)
-   */
-  function stripReasoningTags(raw) {
-    if (!raw || typeof raw !== 'string') return '';
-    return raw
-      .replace(/<(think|thought|thinking)>[\s\S]*?<\/\1>/gi, '')
-      .replace(/<(think|thought|thinking)>[\s\S]*$/gi, '')
-      .replace(/```(?:thought|thinking)[\s\S]*?```/gi, '')
-      .replace(/^(?:thought|thinking process):\s*[\s\S]*?\n\n/i, '')
-      .trim();
-  }
-
-  /**
    * Parses model output into interleaved line-by-line pairs
    */
-  function parseModelOutput(rawText) {
+  function parseModelOutput(rawText?: string | null): ParsedModelOutput {
     if (!rawText) return { type: 'empty', pairs: [], raw: '' };
 
     // Strip reasoning / thinking tags before parsing
     const cleanedText = stripReasoningTags(rawText);
     if (!cleanedText) return { type: 'empty', pairs: [], raw: '' };
 
-    const pairs = [];
+    const pairs: TranslationPair[] = [];
 
     // Pattern 1: Matches [PAIR] ... [/PAIR] blocks
     const pairBlockRegex = /\[PAIR\]([\s\S]*?)\[\/PAIR\]/gi;
-    let match;
+    let match: RegExpExecArray | null;
     while ((match = pairBlockRegex.exec(cleanedText)) !== null) {
-      const blockContent = match[1];
-      const srcMatch = blockContent.match(/\[(?:SRC|SOURCE|JP)\]([\s\S]*?)\[\/(?:SRC|SOURCE|JP)\]/i);
-      const phoMatch = blockContent.match(/\[(?:PHO|PHONETIC|FURI|FURIGANA|READING)\]([\s\S]*?)\[\/(?:PHO|PHONETIC|FURI|FURIGANA|READING)\]/i);
-      const transMatch = blockContent.match(/\[(?:TRANS|TARGET|EN|CHN)\]([\s\S]*?)\[\/(?:TRANS|TARGET|EN|CHN)\]/i);
-      const vocabMatch = blockContent.match(/\[(?:VOCAB|VOCABULARY|WORDS)\]([\s\S]*?)\[\/(?:VOCAB|VOCABULARY|WORDS)\]/i);
+      const blockContent = match[1] || '';
+      const srcMatch = blockContent.match(
+        /\[(?:SRC|SOURCE|JP)\]([\s\S]*?)\[\/(?:SRC|SOURCE|JP)\]/i
+      );
+      const phoMatch = blockContent.match(
+        /\[(?:PHO|PHONETIC|FURI|FURIGANA|READING)\]([\s\S]*?)\[\/(?:PHO|PHONETIC|FURI|FURIGANA|READING)\]/i
+      );
+      const transMatch = blockContent.match(
+        /\[(?:TRANS|TARGET|EN|CHN)\]([\s\S]*?)\[\/(?:TRANS|TARGET|EN|CHN)\]/i
+      );
+      const vocabMatch = blockContent.match(
+        /\[(?:VOCAB|VOCABULARY|WORDS)\]([\s\S]*?)\[\/(?:VOCAB|VOCABULARY|WORDS)\]/i
+      );
 
       if (srcMatch || transMatch || phoMatch || vocabMatch) {
         pairs.push({
-          src: srcMatch ? srcMatch[1].trim() : '',
-          pho: phoMatch ? phoMatch[1].trim() : '',
-          trans: transMatch ? transMatch[1].trim() : (srcMatch ? '' : blockContent.trim()),
-          vocab: vocabMatch ? vocabMatch[1].trim() : ''
+          src: srcMatch && srcMatch[1] ? srcMatch[1].trim() : '',
+          pho: phoMatch && phoMatch[1] ? phoMatch[1].trim() : '',
+          trans:
+            transMatch && transMatch[1]
+              ? transMatch[1].trim()
+              : srcMatch
+                ? ''
+                : blockContent.trim(),
+          vocab: vocabMatch && vocabMatch[1] ? vocabMatch[1].trim() : ''
         });
       }
     }
@@ -720,31 +758,46 @@
 
     // Pattern 2: Standalone sequential [SRC]...[/SRC] and [TRANS]...[/TRANS]
     const srcRegex = /\[(?:SRC|SOURCE|JP)\]([\s\S]*?)\[\/(?:SRC|SOURCE|JP)\]/gi;
-    const phoRegex = /\[(?:PHO|PHONETIC|FURI|FURIGANA|READING)\]([\s\S]*?)\[\/(?:PHO|PHONETIC|FURI|FURIGANA|READING)\]/gi;
+    const phoRegex =
+      /\[(?:PHO|PHONETIC|FURI|FURIGANA|READING)\]([\s\S]*?)\[\/(?:PHO|PHONETIC|FURI|FURIGANA|READING)\]/gi;
     const transRegex = /\[(?:TRANS|TARGET|EN|CHN)\]([\s\S]*?)\[\/(?:TRANS|TARGET|EN|CHN)\]/gi;
-    const vocabRegex = /\[(?:VOCAB|VOCABULARY|WORDS)\]([\s\S]*?)\[\/(?:VOCAB|VOCABULARY|WORDS)\]/gi;
+    const vocabRegex =
+      /\[(?:VOCAB|VOCABULARY|WORDS)\]([\s\S]*?)\[\/(?:VOCAB|VOCABULARY|WORDS)\]/gi;
 
-    const sources = [];
-    const phonetics = [];
-    const targets = [];
-    const vocabs = [];
-    let sMatch, pMatch, tMatch, vMatch;
+    const sources: string[] = [];
+    const phonetics: string[] = [];
+    const targets: string[] = [];
+    const vocabs: string[] = [];
+    let sMatch: RegExpExecArray | null;
+    let pMatch: RegExpExecArray | null;
+    let tMatch: RegExpExecArray | null;
+    let vMatch: RegExpExecArray | null;
 
     while ((sMatch = srcRegex.exec(cleanedText)) !== null) {
-      sources.push(sMatch[1].trim());
+      if (sMatch[1]) sources.push(sMatch[1].trim());
     }
     while ((pMatch = phoRegex.exec(cleanedText)) !== null) {
-      phonetics.push(pMatch[1].trim());
+      if (pMatch[1]) phonetics.push(pMatch[1].trim());
     }
     while ((tMatch = transRegex.exec(cleanedText)) !== null) {
-      targets.push(tMatch[1].trim());
+      if (tMatch[1]) targets.push(tMatch[1].trim());
     }
     while ((vMatch = vocabRegex.exec(cleanedText)) !== null) {
-      vocabs.push(vMatch[1].trim());
+      if (vMatch[1]) vocabs.push(vMatch[1].trim());
     }
 
-    if (sources.length > 0 || targets.length > 0 || phonetics.length > 0 || vocabs.length > 0) {
-      const maxLen = Math.max(sources.length, targets.length, phonetics.length, vocabs.length);
+    if (
+      sources.length > 0 ||
+      targets.length > 0 ||
+      phonetics.length > 0 ||
+      vocabs.length > 0
+    ) {
+      const maxLen = Math.max(
+        sources.length,
+        targets.length,
+        phonetics.length,
+        vocabs.length
+      );
       for (let i = 0; i < maxLen; i++) {
         pairs.push({
           src: sources[i] || '',
@@ -757,12 +810,20 @@
     }
 
     // Pattern 3: Line-by-line slashed format (e.g. "AAA / BBB")
-    const lines = cleanedText.split(/\r?\n/).map((l) => l.trim()).filter((l) => l.length > 0);
-    const slashPairs = [];
+    const lines = cleanedText
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0);
+    const slashPairs: TranslationPair[] = [];
     for (const line of lines) {
       if (line.includes(' / ')) {
         const parts = line.split(' / ');
-        slashPairs.push({ src: parts[0].trim(), pho: '', trans: parts.slice(1).join(' / ').trim(), vocab: '' });
+        slashPairs.push({
+          src: parts[0]?.trim() || '',
+          pho: '',
+          trans: parts.slice(1).join(' / ').trim(),
+          vocab: ''
+        });
       }
     }
     if (slashPairs.length >= 2) {
@@ -780,8 +841,10 @@
   /**
    * Renders all paired translation blocks in a clean, unified text flow
    */
-  function renderTranslationResult(parsedData) {
-    const bodyContent = windowEl.querySelector('#tzv-body-content');
+  function renderTranslationResult(parsedData: ParsedModelOutput): void {
+    if (!windowEl) return;
+    const bodyContent = windowEl.querySelector<HTMLElement>('#tzv-body-content');
+    if (!bodyContent) return;
     bodyContent.innerHTML = '';
 
     if (parsedData.type === 'pairs' && parsedData.pairs.length > 0) {
@@ -829,22 +892,9 @@
   }
 
   /**
-   * Helper to safely escape HTML entities
-   */
-  function escapeHtml(str) {
-    if (!str) return '';
-    return str
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
-  }
-
-  /**
    * Copies text to clipboard and provides visual button feedback
    */
-  async function copyText(text, btnElement) {
+  async function copyText(text: string, btnElement: HTMLElement): Promise<void> {
     try {
       await navigator.clipboard.writeText(text);
       const origText = btnElement.innerText;
@@ -862,20 +912,25 @@
   /**
    * Copies all text currently displayed in the HUD
    */
-  function copyAllContent() {
-    const bodyContent = windowEl.querySelector('#tzv-body-content');
-    const text = bodyContent.innerText;
+  function copyAllContent(): void {
+    if (!windowEl) return;
+    const bodyContent = windowEl.querySelector<HTMLElement>('#tzv-body-content');
+    const text = bodyContent?.innerText;
     if (!text) return;
-    const copyAllBtn = windowEl.querySelector('#tzv-btn-copy-all');
-    copyText(text, copyAllBtn);
+    const copyAllBtn = windowEl.querySelector<HTMLElement>('#tzv-btn-copy-all');
+    if (copyAllBtn) {
+      copyText(text, copyAllBtn);
+    }
   }
 
   /**
    * Sets the visual status banner
    */
-  function setStatus(type, message) {
-    const dot = windowEl.querySelector('#tzv-status-indicator');
-    const text = windowEl.querySelector('#tzv-status-text');
+  function setStatus(type: 'ready' | 'busy' | 'error', message: string): void {
+    if (!windowEl) return;
+    const dot = windowEl.querySelector<HTMLElement>('#tzv-status-indicator');
+    const text = windowEl.querySelector<HTMLElement>('#tzv-status-text');
+    if (!dot || !text) return;
 
     dot.className = 'tzv-status-dot';
     if (type === 'busy') {
@@ -892,7 +947,7 @@
    * This captures ONLY the decoded video pixels at native resolution,
    * completely bypassing all DOM overlays (YouTube controls, speed, YouTuber title, avatar, seekbar).
    */
-  function captureRawVideoFrame(video) {
+  function captureRawVideoFrame(video: HTMLVideoElement): string | null {
     try {
       const width = video.videoWidth || video.clientWidth;
       const height = video.videoHeight || video.clientHeight;
@@ -902,6 +957,7 @@
       canvas.width = width;
       canvas.height = height;
       const ctx = canvas.getContext('2d');
+      if (!ctx) return null;
       ctx.drawImage(video, 0, 0, width, height);
 
       const dataUrl = canvas.toDataURL('image/png');
@@ -909,7 +965,10 @@
         return dataUrl;
       }
     } catch (err) {
-      console.warn('[tranz-video] Direct canvas capture blocked or tainted, using clean viewport fallback:', err);
+      console.warn(
+        '[tranz-video] Direct canvas capture blocked or tainted, using clean viewport fallback:',
+        err
+      );
     }
     return null;
   }
@@ -917,7 +976,7 @@
   /**
    * Selectors for web video player UI overlays across YouTube, Bilibili, Netflix, HTML5 players.
    */
-  const PLAYER_OVERLAY_SELECTORS = [
+  const PLAYER_OVERLAY_SELECTORS: readonly string[] = [
     // YouTube
     '.ytp-chrome-top',
     '.ytp-chrome-bottom',
@@ -945,9 +1004,17 @@
    * Temporarily suppresses player overlays (YouTube controls, speed badge, title, seekbar)
    * to ensure a clean video snapshot during fallback tab capture.
    */
-  function suppressPlayerOverlays() {
-    const hiddenElements = [];
-    const elements = document.querySelectorAll(PLAYER_OVERLAY_SELECTORS.join(', '));
+  function suppressPlayerOverlays(): () => void {
+    interface HiddenElementState {
+      el: HTMLElement;
+      origDisplay: string;
+      origOpacity: string;
+      origVisibility: string;
+    }
+    const hiddenElements: HiddenElementState[] = [];
+    const elements = document.querySelectorAll<HTMLElement>(
+      PLAYER_OVERLAY_SELECTORS.join(', ')
+    );
     elements.forEach((el) => {
       if (el.style.display !== 'none' && el.style.opacity !== '0') {
         const origDisplay = el.style.display;
@@ -970,7 +1037,7 @@
   /**
    * Primary Translation Workflow Handler
    */
-  async function handleTranslate() {
+  async function handleTranslate(): Promise<void> {
     if (isTranslating) return;
 
     ensureHudElements();
@@ -981,14 +1048,18 @@
       state.isMinimized = false;
       applyGeometry();
       setStatus('error', 'No video found');
-      const bodyContent = windowEl.querySelector('#tzv-body-content');
-      bodyContent.innerHTML = `
-        <div class="tzv-error-state">
-          <div style="font-size: 24px;">⚠️</div>
-          <p class="tzv-error-msg">No active &lt;video&gt; element detected on this page.</p>
-          <p style="font-size: 12px; color: var(--tzv-text-muted);">Please play or pause a video and try again.</p>
-        </div>
-      `;
+      if (windowEl) {
+        const bodyContent = windowEl.querySelector<HTMLElement>('#tzv-body-content');
+        if (bodyContent) {
+          bodyContent.innerHTML = `
+            <div class="tzv-error-state">
+              <div style="font-size: 24px;">⚠️</div>
+              <p class="tzv-error-msg">No active &lt;video&gt; element detected on this page.</p>
+              <p style="font-size: 12px; color: var(--tzv-text-muted);">Please play or pause a video and try again.</p>
+            </div>
+          `;
+        }
+      }
       return;
     }
 
@@ -1006,7 +1077,7 @@
     isTranslating = true;
 
     try {
-      let rawImageDataUrl = null;
+      let rawImageDataUrl: string | null = null;
       let needCrop = false;
       const rect = video.getBoundingClientRect();
       const dpr = window.devicePixelRatio || 1;
@@ -1017,8 +1088,8 @@
       // Method B: If canvas was tainted (cross-origin), use tab capture with player overlay suppression
       if (!rawImageDataUrl) {
         // Hide our own HUD
-        windowEl.classList.add('tzv-hidden');
-        pillEl.classList.add('tzv-hidden');
+        if (windowEl) windowEl.classList.add('tzv-hidden');
+        if (pillEl) pillEl.classList.add('tzv-hidden');
 
         // Hide player UI overlays (speed, 1080p, seekbar, title, channel avatar)
         const restorePlayerOverlays = suppressPlayerOverlays();
@@ -1033,7 +1104,10 @@
         });
 
         try {
-          const captureRes = await chrome.runtime.sendMessage({ type: 'CAPTURE_FRAME' });
+          const capMsg: ExtensionMessage = { type: 'CAPTURE_FRAME' };
+          const captureRes = (await chrome.runtime.sendMessage(
+            capMsg
+          )) as CaptureFrameResponse;
           if (!captureRes?.success || !captureRes.dataUrl) {
             throw new Error(captureRes?.error || 'Failed to capture video frame.');
           }
@@ -1048,24 +1122,31 @@
       state.isMinimized = false;
       applyGeometry();
       setStatus('busy', 'Translating...');
-      showLoadingState('Analyzing & translating...', 'Extracting dialogue and generating bilingual pairs...');
+      showLoadingState(
+        'Analyzing & translating...',
+        'Extracting dialogue and generating bilingual pairs...'
+      );
 
       // Send to background service worker for translation
-      const translatePayload = {
+      const translatePayload: ExtensionMessage = {
         type: 'TRANSLATE_IMAGE',
-        dataUrl: rawImageDataUrl
+        dataUrl: rawImageDataUrl,
+        ...(needCrop
+          ? {
+              rect: {
+                left: rect.left,
+                top: rect.top,
+                width: rect.width,
+                height: rect.height
+              },
+              dpr
+            }
+          : {})
       };
-      if (needCrop) {
-        translatePayload.rect = {
-          left: rect.left,
-          top: rect.top,
-          width: rect.width,
-          height: rect.height
-        };
-        translatePayload.dpr = dpr;
-      }
 
-      const translateRes = await chrome.runtime.sendMessage(translatePayload);
+      const translateRes = (await chrome.runtime.sendMessage(
+        translatePayload
+      )) as TranslateImageResponse;
 
       if (translateRes && translateRes.success) {
         setStatus('ready', 'Translation complete');
@@ -1074,40 +1155,53 @@
       } else {
         const errMsg = translateRes?.error || 'Failed to translate video frame.';
         setStatus('error', 'Error');
-        const bodyContent = windowEl.querySelector('#tzv-body-content');
-        bodyContent.innerHTML = `
-          <div class="tzv-error-state">
-            <div style="font-size: 24px;">❌</div>
-            <p class="tzv-error-msg">${escapeHtml(errMsg)}</p>
-            <button class="tzv-btn-retry" id="tzv-retry-btn">Retry Translation</button>
-          </div>
-        `;
-        bodyContent.querySelector('#tzv-retry-btn')?.addEventListener('click', () => {
-          handleTranslate();
-        });
+        if (windowEl) {
+          const bodyContent = windowEl.querySelector<HTMLElement>('#tzv-body-content');
+          if (bodyContent) {
+            bodyContent.innerHTML = `
+              <div class="tzv-error-state">
+                <div style="font-size: 24px;">❌</div>
+                <p class="tzv-error-msg">${escapeHtml(errMsg)}</p>
+                <button class="tzv-btn-retry" id="tzv-retry-btn">Retry Translation</button>
+              </div>
+            `;
+            bodyContent
+              .querySelector('#tzv-retry-btn')
+              ?.addEventListener('click', () => {
+                handleTranslate();
+              });
+          }
+        }
       }
     } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Extension communication failure.';
       state.isMinimized = false;
       applyGeometry();
       setStatus('error', 'Request failed');
-      const bodyContent = windowEl.querySelector('#tzv-body-content');
-      bodyContent.innerHTML = `
-        <div class="tzv-error-state">
-          <div style="font-size: 24px;">❌</div>
-          <p class="tzv-error-msg">${escapeHtml(err.message || 'Extension communication failure.')}</p>
-          <button class="tzv-btn-retry" id="tzv-retry-btn">Retry</button>
-        </div>
-      `;
-      bodyContent.querySelector('#tzv-retry-btn')?.addEventListener('click', () => {
-        handleTranslate();
-      });
+      if (windowEl) {
+        const bodyContent = windowEl.querySelector<HTMLElement>('#tzv-body-content');
+        if (bodyContent) {
+          bodyContent.innerHTML = `
+            <div class="tzv-error-state">
+              <div style="font-size: 24px;">❌</div>
+              <p class="tzv-error-msg">${escapeHtml(errorMsg)}</p>
+              <button class="tzv-btn-retry" id="tzv-retry-btn">Retry</button>
+            </div>
+          `;
+          bodyContent
+            .querySelector('#tzv-retry-btn')
+            ?.addEventListener('click', () => {
+              handleTranslate();
+            });
+        }
+      }
     } finally {
       isTranslating = false;
     }
   }
 
   // Handle Fullscreen transitions (re-parent to fullscreen container if active)
-  function handleFullscreenChange() {
+  function handleFullscreenChange(): void {
     syncVideoPresence(false);
   }
   document.addEventListener('fullscreenchange', handleFullscreenChange);
@@ -1128,58 +1222,67 @@
   });
 
   // Dynamic MutationObserver to detect late-mounted or asynchronously hydrated <video> elements
-  let videoObserver = null;
-  let mutationDebounce = null;
-  function observeVideoElements() {
+  let videoObserver: MutationObserver | null = null;
+  let mutationDebounce: ReturnType<typeof setTimeout> | null = null;
+  function observeVideoElements(): void {
     if (videoObserver) return;
     try {
       videoObserver = new MutationObserver(() => {
-        clearTimeout(mutationDebounce);
+        if (mutationDebounce !== null) clearTimeout(mutationDebounce);
         mutationDebounce = setTimeout(() => {
           syncVideoPresence(false);
         }, 350);
       });
 
-      videoObserver.observe(document.documentElement || document.body, {
-        childList: true,
-        subtree: true
-      });
+      const rootNode = document.documentElement || document.body;
+      if (rootNode) {
+        videoObserver.observe(rootNode, {
+          childList: true,
+          subtree: true
+        });
+      }
     } catch (err) {
       console.warn('[Tranz Video] MutationObserver error:', err);
     }
   }
 
   // Listen for messages from background service worker / popup action menu
-  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.action === 'TRIGGER_TRANSLATE') {
-      state.isMinimized = false;
-      syncVideoPresence(true); // Force show window on explicit user trigger
-      applyGeometry();
-      handleTranslate();
-      sendResponse({ received: true });
+  chrome.runtime.onMessage.addListener(
+    (
+      message: TabActionMessage,
+      _sender: chrome.runtime.MessageSender,
+      sendResponse: (res: { received: boolean }) => void
+    ) => {
+      if (message.action === 'TRIGGER_TRANSLATE') {
+        state.isMinimized = false;
+        syncVideoPresence(true); // Force show window on explicit user trigger
+        applyGeometry();
+        handleTranslate();
+        sendResponse({ received: true });
+      }
     }
-  });
+  );
 
   // Listen for storage changes across tabs (e.g. Enable/Disable toggle in popup)
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area === 'local') {
-      if (changes.extensionEnabled !== undefined) {
-        currentConfig = currentConfig || {};
-        currentConfig.extensionEnabled = changes.extensionEnabled.newValue;
+      if (changes['extensionEnabled'] !== undefined) {
+        currentConfig = currentConfig || ({} as AppConfig);
+        currentConfig.extensionEnabled = changes['extensionEnabled'].newValue as boolean;
         syncVideoPresence(false);
       }
-      if (changes.targetLanguage !== undefined) {
-        currentConfig = currentConfig || {};
-        currentConfig.targetLanguage = changes.targetLanguage.newValue;
+      if (changes['targetLanguage'] !== undefined) {
+        currentConfig = currentConfig || ({} as AppConfig);
+        currentConfig.targetLanguage = changes['targetLanguage'].newValue as string;
       }
-      if (changes.learningMode !== undefined) {
-        currentConfig = currentConfig || {};
-        currentConfig.learningMode = changes.learningMode.newValue;
+      if (changes['learningMode'] !== undefined) {
+        currentConfig = currentConfig || ({} as AppConfig);
+        currentConfig.learningMode = changes['learningMode'].newValue as AppConfig['learningMode'];
       }
-      if (changes.hudTheme !== undefined) {
-        currentConfig = currentConfig || {};
-        currentConfig.hudTheme = changes.hudTheme.newValue;
-        applyHudTheme(changes.hudTheme.newValue);
+      if (changes['hudTheme'] !== undefined) {
+        currentConfig = currentConfig || ({} as AppConfig);
+        currentConfig.hudTheme = changes['hudTheme'].newValue as HudThemeConfig;
+        applyHudTheme(changes['hudTheme'].newValue as HudThemeConfig);
       }
     }
   });

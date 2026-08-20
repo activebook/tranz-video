@@ -1,0 +1,28 @@
+{
+  "name": "tranz-video",
+  "version": "1.0.11",
+  "description": "Translate on-screen text, game dialogue, and visual text from any web video using AI vision.",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "dev": "node scripts/build.mjs --watch",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "chrome-extension",
+    "translation",
+    "video-translator",
+    "ai-vision",
+    "furigana",
+    "language-learning",
+    "ocr"
+  ],
+  "author": "activebook",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/chrome": "^0.0.304",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.7.3"
+  }
+}

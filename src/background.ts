@@ -4,99 +4,37 @@
  * and communication with OpenAI-compatible multimodal endpoints.
  */
 
-export const DEFAULT_ENDPOINTS = [
-  {
-    id: 'ep-local',
-    name: 'Local Proxy / Ollama',
-    endpoint: 'http://127.0.0.1:8045/v1',
-    model: 'gemini-3.1-flash-lite',
-    apiKey: '',
-    temperature: 0.2
-  },
-  {
-    id: 'ep-gemini',
-    name: 'Google Gemini (OpenAI Compatible)',
-    endpoint: 'https://generativelanguage.googleapis.com/v1beta/openai',
-    model: 'gemini-3.5-flash-lite',
-    apiKey: '',
-    temperature: 0.2
-  },
-  {
-    id: 'ep-openai',
-    name: 'OpenAI Direct',
-    endpoint: 'https://api.openai.com/v1',
-    model: 'gpt-5.6-luna',
-    apiKey: '',
-    temperature: 0.2
-  },
-  {
-    id: 'ep-openrouter',
-    name: 'OpenRouter',
-    endpoint: 'https://openrouter.ai/api/v1',
-    model: 'qwen/qwen3.8-27b',
-    apiKey: '',
-    temperature: 0.2
-  }
-];
+import {
+  AppConfig,
+  DEFAULT_CONFIG,
+  DEFAULT_ENDPOINTS,
+  EndpointProfile,
+  LANGUAGE_NAMES
+} from './types/config';
+import type {
+  BoundingRect,
+  CaptureFrameResponse,
+  ExtensionMessage,
+  GetConfigResponse,
+  SaveConfigResponse,
+  TabActionMessage,
+  TestConnectionResponse,
+  TranslateImageResponse
+} from './types/messages';
+import { stripReasoningTags } from './utils/sanitize';
+import { normalizeChatCompletionsUrl } from './utils/url';
 
-export const DEFAULT_CONFIG = {
-  activeEndpointId: 'ep-local',
-  endpoints: DEFAULT_ENDPOINTS,
-  endpoint: 'http://127.0.0.1:8045/v1',
-  model: 'gemini-3.1-flash-lite',
-  apiKey: '',
-  temperature: 0.2,
-  targetLanguage: 'en',
-  learningMode: 'bilingual', // 'bilingual' | 'furigana' | 'vocabulary' | 'target_only'
-  systemPrompt: `You are an expert visual translator and language-learning tutor.
-Your task is to transcribe on-screen text from video frames and translate it accurately into the requested target language.
-Adhere strictly to the requested structural markers. Do not add conversational filler, preambles, or markdown notes outside the requested structure.
-Preserve the natural reading order, UI labels, and character dialogue hierarchy.`,
-  userPromptTemplate: `Detect and transcribe all visible on-screen text in this video frame, then translate it into {TARGET_LANGUAGE}.
-{MODE_INSTRUCTIONS}`,
-  autoPause: true,
-  extensionEnabled: true,
-  hudTheme: {
-    sourceFontSize: 18,
-    sourceColor: '#38bdf8',
-    furiganaFontSize: 16,
-    furiganaColor: '#fbbf24',
-    targetFontSize: 14,
-    targetColor: '#ffffff',
-    hudBgColor: '#0a0e16',
-    hudOpacity: 88,
-    hudEffect: 'translucent' // 'translucent' | 'glassmorphism' | 'opaque' | 'transparent_glow'
-  },
-  windowGeometry: {
-    x: 32,
-    y: 32,
-    width: 440,
-    height: 360,
-    zoom: 1.0,
-    isMinimized: false,
-    isVisible: true
-  }
-};
-
-export const LANGUAGE_NAMES = {
-  'en': 'English',
-  'zh-Hans': 'Simplified Chinese (简体中文)',
-  'zh-Hant': 'Traditional Chinese (繁體中文)',
-  'ja': 'Japanese (日本語)',
-  'ko': 'Korean (한국어)',
-  'es': 'Spanish (Español)',
-  'fr': 'French (Français)'
-};
+export { DEFAULT_CONFIG, DEFAULT_ENDPOINTS, LANGUAGE_NAMES, stripReasoningTags };
 
 /**
  * Retrieves merged configuration from chrome.storage.local
  */
-async function getConfig() {
-  const stored = await chrome.storage.local.get(null);
+export async function getConfig(): Promise<AppConfig> {
+  const stored = (await chrome.storage.local.get(null)) as Partial<AppConfig>;
 
   // Migration: Ensure endpoints array exists and migrate legacy single fields if needed
-  let endpoints = stored.endpoints;
-  if (!Array.isArray(endpoints) || endpoints.length === 0) {
+  let endpoints: EndpointProfile[] = Array.isArray(stored.endpoints) ? stored.endpoints : [];
+  if (endpoints.length === 0) {
     if (stored.endpoint) {
       endpoints = [
         {
@@ -110,12 +48,13 @@ async function getConfig() {
         ...DEFAULT_ENDPOINTS.filter((e) => e.id !== 'ep-local')
       ];
     } else {
-      endpoints = DEFAULT_ENDPOINTS;
+      endpoints = [...DEFAULT_ENDPOINTS];
     }
   }
 
   const activeEndpointId = stored.activeEndpointId || endpoints[0]?.id || 'ep-local';
-  const activeEndpoint = endpoints.find((e) => e.id === activeEndpointId) || endpoints[0] || DEFAULT_ENDPOINTS[0];
+  const activeEndpoint =
+    endpoints.find((e) => e.id === activeEndpointId) || endpoints[0] || DEFAULT_ENDPOINTS[0]!;
 
   return {
     ...DEFAULT_CONFIG,
@@ -126,7 +65,10 @@ async function getConfig() {
     endpoint: activeEndpoint.endpoint || DEFAULT_CONFIG.endpoint,
     model: activeEndpoint.model || DEFAULT_CONFIG.model,
     apiKey: activeEndpoint.apiKey || '',
-    temperature: typeof activeEndpoint.temperature === 'number' ? activeEndpoint.temperature : DEFAULT_CONFIG.temperature,
+    temperature:
+      typeof activeEndpoint.temperature === 'number'
+        ? activeEndpoint.temperature
+        : DEFAULT_CONFIG.temperature,
     hudTheme: {
       ...DEFAULT_CONFIG.hudTheme,
       ...(stored.hudTheme || {})
@@ -141,8 +83,9 @@ async function getConfig() {
 /**
  * Builds the user prompt from template and current settings
  */
-function buildUserPrompt(config) {
-  const targetLangName = LANGUAGE_NAMES[config.targetLanguage] || config.targetLanguage || 'English';
+export function buildUserPrompt(config: AppConfig): string {
+  const targetLangName =
+    LANGUAGE_NAMES[config.targetLanguage] || config.targetLanguage || 'English';
 
   let modeInstructions = '';
   if (config.learningMode === 'target_only') {
@@ -187,23 +130,13 @@ If multiple text blocks exist, output sequential [PAIR] blocks in natural readin
 }
 
 /**
- * Normalizes OpenAI base URL by appending /chat/completions
- */
-function normalizeChatCompletionsUrl(baseUrl) {
-  if (!baseUrl) {
-    baseUrl = DEFAULT_CONFIG.endpoint;
-  }
-  const cleanBase = baseUrl.trim().replace(/\/+$/, '');
-  if (cleanBase.endsWith('/chat/completions')) {
-    return cleanBase;
-  }
-  return `${cleanBase}/chat/completions`;
-}
-
-/**
  * Crops a full-tab data URL screenshot to the video bounding box scaled by DPR
  */
-async function cropTabCapture(dataUrl, rect, dpr) {
+export async function cropTabCapture(
+  dataUrl: string,
+  rect: BoundingRect,
+  dpr: number
+): Promise<string> {
   const response = await fetch(dataUrl);
   const blob = await response.blob();
   const imageBitmap = await createImageBitmap(blob);
@@ -220,6 +153,10 @@ async function cropTabCapture(dataUrl, rect, dpr) {
 
   const offscreen = new OffscreenCanvas(sw, sh);
   const ctx = offscreen.getContext('2d');
+  if (!ctx) {
+    throw new Error('Failed to create OffscreenCanvas 2D rendering context');
+  }
+
   ctx.drawImage(imageBitmap, sx, sy, sw, sh, 0, 0, sw, sh);
 
   const croppedBlob = await offscreen.convertToBlob({ type: 'image/png' });
@@ -231,7 +168,7 @@ async function cropTabCapture(dataUrl, rect, dpr) {
   const chunkSize = 8192;
   for (let i = 0; i < bytes.length; i += chunkSize) {
     const chunk = bytes.subarray(i, i + chunkSize);
-    binary += String.fromCharCode.apply(null, chunk);
+    binary += String.fromCharCode.apply(null, Array.from(chunk));
   }
   const base64 = btoa(binary);
   return `data:image/png;base64,${base64}`;
@@ -240,11 +177,11 @@ async function cropTabCapture(dataUrl, rect, dpr) {
 /**
  * Sends a vision chat completions request to the configured OpenAI-compatible endpoint
  */
-async function callMultimodalApi(imageDataUrl, config) {
+export async function callMultimodalApi(imageDataUrl: string, config: AppConfig): Promise<string> {
   const url = normalizeChatCompletionsUrl(config.endpoint);
   const userPromptText = buildUserPrompt(config);
 
-  const headers = {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json'
   };
   if (config.apiKey && config.apiKey.trim().length > 0) {
@@ -295,19 +232,36 @@ async function callMultimodalApi(imageDataUrl, config) {
     if (!response.ok) {
       let errorDetail = '';
       try {
-        const errorJson = JSON.parse(rawResponseText);
-        errorDetail = errorJson?.error?.message || (typeof errorJson?.error === 'string' ? errorJson.error : JSON.stringify(errorJson));
+        const errorJson = JSON.parse(rawResponseText) as { error?: { message?: string } | string };
+        errorDetail =
+          typeof errorJson?.error === 'object' && errorJson.error !== null
+            ? errorJson.error.message || JSON.stringify(errorJson.error)
+            : typeof errorJson?.error === 'string'
+              ? errorJson.error
+              : JSON.stringify(errorJson);
       } catch {
         errorDetail = rawResponseText;
       }
-      throw new Error(`AI Gateway error (HTTP ${response.status}): ${errorDetail || response.statusText}`);
+      throw new Error(
+        `AI Gateway error (HTTP ${response.status}): ${errorDetail || response.statusText}`
+      );
     }
 
-    let data;
+    interface ChatCompletionResponse {
+      choices?: Array<{
+        message?: {
+          content?: string;
+        };
+      }>;
+    }
+
+    let data: ChatCompletionResponse;
     try {
-      data = JSON.parse(rawResponseText);
+      data = JSON.parse(rawResponseText) as ChatCompletionResponse;
     } catch {
-      throw new Error(`AI Gateway returned invalid JSON response: ${rawResponseText.slice(0, 200)}`);
+      throw new Error(
+        `AI Gateway returned invalid JSON response: ${rawResponseText.slice(0, 200)}`
+      );
     }
 
     const content = data?.choices?.[0]?.message?.content;
@@ -319,7 +273,7 @@ async function callMultimodalApi(imageDataUrl, config) {
     return stripReasoningTags(content);
   } catch (err) {
     clearTimeout(timeoutId);
-    if (err.name === 'AbortError') {
+    if (err instanceof Error && err.name === 'AbortError') {
       throw new Error('AI gateway request timed out after 35 seconds.');
     }
     throw err;
@@ -327,24 +281,13 @@ async function callMultimodalApi(imageDataUrl, config) {
 }
 
 /**
- * Strips reasoning / internal thinking tags output by models (e.g. DeepSeek-R1, Qwen-Thinking, Gemini Thinking)
- */
-export function stripReasoningTags(raw) {
-  if (!raw || typeof raw !== 'string') return '';
-  return raw
-    .replace(/<(think|thought|thinking)>[\s\S]*?<\/\1>/gi, '')
-    .replace(/<(think|thought|thinking)>[\s\S]*$/gi, '')
-    .replace(/```(?:thought|thinking)[\s\S]*?```/gi, '')
-    .replace(/^(?:thought|thinking process):\s*[\s\S]*?\n\n/i, '')
-    .trim();
-}
-
-/**
  * Test connectivity against an OpenAI-compatible endpoint
  */
-async function testEndpointConnection(config) {
+export async function testEndpointConnection(
+  config: EndpointProfile
+): Promise<TestConnectionResponse> {
   const url = normalizeChatCompletionsUrl(config.endpoint);
-  const headers = {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json'
   };
   if (config.apiKey && config.apiKey.trim().length > 0) {
@@ -380,9 +323,13 @@ async function testEndpointConnection(config) {
       };
     }
 
-    let data;
+    interface TestResponse {
+      choices?: Array<{ message?: { content?: string } }>;
+    }
+
+    let data: TestResponse;
     try {
-      data = JSON.parse(rawText);
+      data = JSON.parse(rawText) as TestResponse;
     } catch {
       return {
         success: true,
@@ -402,129 +349,167 @@ async function testEndpointConnection(config) {
     };
   } catch (err) {
     clearTimeout(timeoutId);
+    const isAbort = err instanceof Error && err.name === 'AbortError';
+    const message = err instanceof Error ? err.message : 'Unknown error';
     return {
       success: false,
       status: 0,
       latency: Date.now() - startTime,
-      error: err.name === 'AbortError' ? 'Connection timed out after 10s' : err.message
+      error: isAbort ? 'Connection timed out after 10s' : message
     };
   }
+}
+
+/**
+ * Helper to capture visible tab respecting optional windowId
+ */
+async function captureTab(windowId?: number): Promise<string> {
+  if (typeof windowId === 'number') {
+    return await chrome.tabs.captureVisibleTab(windowId, { format: 'png' });
+  }
+  return await chrome.tabs.captureVisibleTab({ format: 'png' });
 }
 
 // Global capture lock to prevent concurrency conflicts
 let isProcessingCapture = false;
 
 // Handle messages from content scripts and options UI
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.type === 'CAPTURE_FRAME') {
-    (async () => {
-      try {
-        const windowId = sender.tab?.windowId;
-        const dataUrl = await chrome.tabs.captureVisibleTab(windowId, { format: 'png' });
-        sendResponse({ success: true, dataUrl });
-      } catch (err) {
-        console.error('[tranz-video] Frame capture error:', err);
-        sendResponse({ success: false, error: err.message || 'Tab capture failed.' });
-      }
-    })();
-    return true;
-  }
-
-  if (message.type === 'TRANSLATE_IMAGE') {
-    (async () => {
-      if (isProcessingCapture) {
-        sendResponse({ success: false, error: 'A translation is already in progress.' });
-        return;
-      }
-      isProcessingCapture = true;
-
-      try {
-        let finalImageDataUrl = message.dataUrl;
-        if (message.rect && message.dpr) {
-          finalImageDataUrl = await cropTabCapture(message.dataUrl, message.rect, message.dpr);
+chrome.runtime.onMessage.addListener(
+  (
+    message: ExtensionMessage,
+    sender: chrome.runtime.MessageSender,
+    sendResponse: (response: unknown) => void
+  ): boolean | void => {
+    if (message.type === 'CAPTURE_FRAME') {
+      (async () => {
+        try {
+          const windowId = sender.tab?.windowId;
+          const dataUrl = await captureTab(windowId);
+          const res: CaptureFrameResponse = { success: true, dataUrl };
+          sendResponse(res);
+        } catch (err) {
+          const errorMsg = err instanceof Error ? err.message : 'Tab capture failed.';
+          console.error('[tranz-video] Frame capture error:', err);
+          const res: CaptureFrameResponse = { success: false, error: errorMsg };
+          sendResponse(res);
         }
+      })();
+      return true;
+    }
+
+    if (message.type === 'TRANSLATE_IMAGE') {
+      (async () => {
+        if (isProcessingCapture) {
+          const res: TranslateImageResponse = {
+            success: false,
+            error: 'A translation is already in progress.'
+          };
+          sendResponse(res);
+          return;
+        }
+        isProcessingCapture = true;
+
+        try {
+          let finalImageDataUrl = message.dataUrl;
+          if (message.rect && message.dpr) {
+            finalImageDataUrl = await cropTabCapture(message.dataUrl, message.rect, message.dpr);
+          }
+          const config = await getConfig();
+          const rawResponse = await callMultimodalApi(finalImageDataUrl, config);
+
+          const res: TranslateImageResponse = {
+            success: true,
+            text: rawResponse,
+            learningMode: config.learningMode,
+            targetLanguage: config.targetLanguage
+          };
+          sendResponse(res);
+        } catch (err) {
+          const errorMsg = err instanceof Error ? err.message : 'Translation error';
+          console.error('[tranz-video] Translation error:', err);
+          const res: TranslateImageResponse = { success: false, error: errorMsg };
+          sendResponse(res);
+        } finally {
+          isProcessingCapture = false;
+        }
+      })();
+      return true;
+    }
+
+    if (message.type === 'TRANSLATE_FRAME') {
+      (async () => {
+        if (isProcessingCapture) {
+          const res: TranslateImageResponse = {
+            success: false,
+            error: 'A translation is already in progress.'
+          };
+          sendResponse(res);
+          return;
+        }
+        isProcessingCapture = true;
+
+        try {
+          const windowId = sender.tab?.windowId;
+          const dataUrl = await captureTab(windowId);
+          const croppedDataUrl = await cropTabCapture(dataUrl, message.rect, message.dpr);
+          const config = await getConfig();
+          const rawResponse = await callMultimodalApi(croppedDataUrl, config);
+
+          const res: TranslateImageResponse = {
+            success: true,
+            text: rawResponse,
+            learningMode: config.learningMode,
+            targetLanguage: config.targetLanguage
+          };
+          sendResponse(res);
+        } catch (err) {
+          const errorMsg = err instanceof Error ? err.message : 'Unknown capture error';
+          console.error('[tranz-video] Translation error:', err);
+          const res: TranslateImageResponse = { success: false, error: errorMsg };
+          sendResponse(res);
+        } finally {
+          isProcessingCapture = false;
+        }
+      })();
+      return true; // Keep message channel open for async response
+    }
+
+    if (message.type === 'GET_CONFIG') {
+      (async () => {
         const config = await getConfig();
-        const rawResponse = await callMultimodalApi(finalImageDataUrl, config);
+        const res: GetConfigResponse = { success: true, config };
+        sendResponse(res);
+      })();
+      return true;
+    }
 
-        sendResponse({
-          success: true,
-          text: rawResponse,
-          learningMode: config.learningMode,
-          targetLanguage: config.targetLanguage
-        });
-      } catch (err) {
-        console.error('[tranz-video] Translation error:', err);
-        sendResponse({ success: false, error: err.message || 'Translation error' });
-      } finally {
-        isProcessingCapture = false;
-      }
-    })();
-    return true;
+    if (message.type === 'SAVE_CONFIG') {
+      (async () => {
+        await chrome.storage.local.set(message.config);
+        const res: SaveConfigResponse = { success: true };
+        sendResponse(res);
+      })();
+      return true;
+    }
+
+    if (message.type === 'TEST_CONNECTION') {
+      (async () => {
+        const result = await testEndpointConnection(message.config);
+        sendResponse(result);
+      })();
+      return true;
+    }
+
+    return false;
   }
-
-  if (message.type === 'TRANSLATE_FRAME') {
-    (async () => {
-      if (isProcessingCapture) {
-        sendResponse({ success: false, error: 'A translation is already in progress.' });
-        return;
-      }
-      isProcessingCapture = true;
-
-      try {
-        const windowId = sender.tab?.windowId;
-        const dataUrl = await chrome.tabs.captureVisibleTab(windowId, { format: 'png' });
-        const croppedDataUrl = await cropTabCapture(dataUrl, message.rect, message.dpr);
-        const config = await getConfig();
-        const rawResponse = await callMultimodalApi(croppedDataUrl, config);
-
-        sendResponse({
-          success: true,
-          text: rawResponse,
-          learningMode: config.learningMode,
-          targetLanguage: config.targetLanguage
-        });
-      } catch (err) {
-        console.error('[tranz-video] Translation error:', err);
-        sendResponse({ success: false, error: err.message || 'Unknown capture error' });
-      } finally {
-        isProcessingCapture = false;
-      }
-    })();
-    return true; // Keep message channel open for async response
-  }
-
-  if (message.type === 'GET_CONFIG') {
-    (async () => {
-      const config = await getConfig();
-      sendResponse({ success: true, config });
-    })();
-    return true;
-  }
-
-  if (message.type === 'SAVE_CONFIG') {
-    (async () => {
-      await chrome.storage.local.set(message.config);
-      sendResponse({ success: true });
-    })();
-    return true;
-  }
-
-  if (message.type === 'TEST_CONNECTION') {
-    (async () => {
-      const result = await testEndpointConnection(message.config);
-      sendResponse(result);
-    })();
-    return true;
-  }
-
-  return false;
-});
+);
 
 // Extension action icon click trigger
 chrome.action.onClicked.addListener(async (tab) => {
   if (!tab?.id) return;
   try {
-    await chrome.tabs.sendMessage(tab.id, { action: 'TRIGGER_TRANSLATE' });
+    const triggerMsg: TabActionMessage = { action: 'TRIGGER_TRANSLATE' };
+    await chrome.tabs.sendMessage(tab.id, triggerMsg);
   } catch (err) {
     console.warn('[tranz-video] Failed to notify tab on action click:', err);
   }

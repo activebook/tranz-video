@@ -10,6 +10,7 @@ on:
       - 'images/**'
       - 'goal/**'
       - '.github/workflows/jekyll-gh-pages.yml'
+      - '.github/workflows/ci.yml'
       - '.gitignore'
   workflow_dispatch:
 
@@ -27,13 +28,20 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Validate Syntax & Manifest
-        run: |
-          jq empty manifest.json
-          node --check background.js
-          node --check content.js
-          node --check popup.js
-          node --check options.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Validate Manifest JSON
+        run: jq empty manifest.json
+
+      - name: Static Type Checking
+        run: npm run type-check
 
       - name: Determine Next Semantic Release Tag
         id: semver
@@ -64,28 +72,23 @@ jobs:
           echo "Target Release Tag: $NEW_TAG"
           echo "tag=$NEW_TAG" >> "$GITHUB_OUTPUT"
 
-      - name: Synchronize Manifest Version with Target Release Tag
+      - name: Synchronize Manifest & Package Version with Target Release Tag
         run: |
           TAG="${{ steps.semver.outputs.tag }}"
           CLEAN_VER="${TAG#v}"
-          echo "Synchronizing manifest.json version to: $CLEAN_VER"
+          echo "Synchronizing manifest.json and package.json version to: $CLEAN_VER"
           jq --arg v "$CLEAN_VER" '.version = $v' manifest.json > manifest.json.tmp && mv manifest.json.tmp manifest.json
+          npm version "$CLEAN_VER" --no-git-tag-version
 
-      - name: Build Extension Archive
+      - name: Build Production Distribution
+        run: npm run build -- --prod
+
+      - name: Build Extension Archive from dist/
         run: |
           TAG="${{ steps.semver.outputs.tag }}"
           ZIP_NAME="tranz-video-${TAG}.zip"
-          zip -r "$ZIP_NAME" . \
-            -x ".git*" \
-            -x ".github/*" \
-            -x "images/*" \
-            -x "goal/*" \
-            -x "*.md" \
-            -x "LICENSE" \
-            -x ".gitignore" \
-            -x "*.zip" \
-            -x "*.DS_Store" \
-            -x "scratch/*"
+          cd dist && zip -r "../$ZIP_NAME" .
+          cd ..
           echo "ZIP_NAME=$ZIP_NAME" >> "$GITHUB_ENV"
 
       - name: Create GitHub Release and Upload Asset
@@ -97,14 +100,14 @@ jobs:
             --title "Tranz Video $TAG" \
             --generate-notes
 
-      - name: Commit Manifest Version Bump to Main
+      - name: Commit Manifest and Package Version Bump to Main
         run: |
           TAG="${{ steps.semver.outputs.tag }}"
           CLEAN_VER="${TAG#v}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add manifest.json
+          git add manifest.json package.json package-lock.json
           if ! git diff --staged --quiet; then
-            git commit -m "chore(release): synchronize manifest.json version to $CLEAN_VER [skip ci]"
+            git commit -m "chore(release): synchronize version to $CLEAN_VER [skip ci]"
             git push origin main
           fi
