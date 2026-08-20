@@ -7,6 +7,7 @@
 document.addEventListener('DOMContentLoaded', async () => {
   const enableToggle = document.getElementById('enable-toggle');
   const statusSubtext = document.getElementById('status-subtext');
+  const endpointSelect = document.getElementById('endpoint-select');
   const targetLangSelect = document.getElementById('target-lang-select');
   const learningModeSelect = document.getElementById('learning-mode-select');
   const openOptionsBtn = document.getElementById('btn-open-options');
@@ -19,10 +20,24 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 1. Load active configuration from storage
   try {
     if (chrome.runtime?.id) {
-      const config = await chrome.storage.local.get(['extensionEnabled', 'targetLanguage', 'learningMode']);
+      const config = await chrome.storage.local.get(['extensionEnabled', 'targetLanguage', 'learningMode', 'endpoints', 'activeEndpointId']);
       const isEnabled = config.extensionEnabled !== false; // Default true
       enableToggle.checked = isEnabled;
       updateStatusText(isEnabled);
+
+      // Populate endpoints dropdown
+      if (endpointSelect && Array.isArray(config.endpoints) && config.endpoints.length > 0) {
+        endpointSelect.innerHTML = '';
+        config.endpoints.forEach((ep) => {
+          const opt = document.createElement('option');
+          opt.value = ep.id;
+          opt.textContent = ep.name || ep.model || ep.endpoint;
+          endpointSelect.appendChild(opt);
+        });
+        if (config.activeEndpointId) {
+          endpointSelect.value = config.activeEndpointId;
+        }
+      }
 
       if (config.targetLanguage && targetLangSelect) {
         targetLangSelect.value = config.targetLanguage;
@@ -55,7 +70,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // 3. Handle Target Language Quick Switch
+  // 3. Handle Active AI Provider Quick Switch
+  if (endpointSelect) {
+    endpointSelect.addEventListener('change', async (e) => {
+      const newEndpointId = e.target.value;
+      try {
+        if (chrome.runtime?.id) {
+          await chrome.storage.local.set({ activeEndpointId: newEndpointId });
+        }
+      } catch (err) {
+        console.error('[Tranz Video] Failed to save active endpoint:', err);
+      }
+    });
+  }
+
+  // 4. Handle Target Language Quick Switch
   targetLangSelect.addEventListener('change', async (e) => {
     const newLang = e.target.value;
     try {

@@ -4,13 +4,50 @@
  * and communication with OpenAI-compatible multimodal endpoints.
  */
 
+export const DEFAULT_ENDPOINTS = [
+  {
+    id: 'ep-local',
+    name: 'Local Proxy / Ollama',
+    endpoint: 'http://127.0.0.1:8045/v1',
+    model: 'gemini-3.1-flash-lite',
+    apiKey: '',
+    temperature: 0.2
+  },
+  {
+    id: 'ep-gemini',
+    name: 'Google Gemini (OpenAI Compatible)',
+    endpoint: 'https://generativelanguage.googleapis.com/v1beta/openai',
+    model: 'gemini-3.5-flash-lite',
+    apiKey: '',
+    temperature: 0.2
+  },
+  {
+    id: 'ep-openai',
+    name: 'OpenAI Direct',
+    endpoint: 'https://api.openai.com/v1',
+    model: 'gpt-5.6-luna',
+    apiKey: '',
+    temperature: 0.2
+  },
+  {
+    id: 'ep-openrouter',
+    name: 'OpenRouter',
+    endpoint: 'https://openrouter.ai/api/v1',
+    model: 'qwen/qwen3.8-27b',
+    apiKey: '',
+    temperature: 0.2
+  }
+];
+
 export const DEFAULT_CONFIG = {
+  activeEndpointId: 'ep-local',
+  endpoints: DEFAULT_ENDPOINTS,
   endpoint: 'http://127.0.0.1:8045/v1',
-  model: 'gemini-2.5-flash-lite',
+  model: 'gemini-3.1-flash-lite',
   apiKey: '',
   temperature: 0.2,
   targetLanguage: 'en',
-  learningMode: 'bilingual', // 'bilingual' | 'target_only'
+  learningMode: 'bilingual', // 'bilingual' | 'furigana' | 'vocabulary' | 'target_only'
   systemPrompt: `You are an expert visual translator and language-learning tutor.
 Your task is to transcribe on-screen text from video frames and translate it accurately into the requested target language.
 Adhere strictly to the requested structural markers. Do not add conversational filler, preambles, or markdown notes outside the requested structure.
@@ -56,9 +93,40 @@ export const LANGUAGE_NAMES = {
  */
 async function getConfig() {
   const stored = await chrome.storage.local.get(null);
+
+  // Migration: Ensure endpoints array exists and migrate legacy single fields if needed
+  let endpoints = stored.endpoints;
+  if (!Array.isArray(endpoints) || endpoints.length === 0) {
+    if (stored.endpoint) {
+      endpoints = [
+        {
+          id: 'ep-custom',
+          name: 'Custom Service',
+          endpoint: stored.endpoint,
+          model: stored.model || DEFAULT_CONFIG.model,
+          apiKey: stored.apiKey || '',
+          temperature: typeof stored.temperature === 'number' ? stored.temperature : 0.2
+        },
+        ...DEFAULT_ENDPOINTS.filter((e) => e.id !== 'ep-local')
+      ];
+    } else {
+      endpoints = DEFAULT_ENDPOINTS;
+    }
+  }
+
+  const activeEndpointId = stored.activeEndpointId || endpoints[0]?.id || 'ep-local';
+  const activeEndpoint = endpoints.find((e) => e.id === activeEndpointId) || endpoints[0] || DEFAULT_ENDPOINTS[0];
+
   return {
     ...DEFAULT_CONFIG,
     ...stored,
+    endpoints,
+    activeEndpointId,
+    // Dynamically resolved active endpoint credentials for all downstream callers
+    endpoint: activeEndpoint.endpoint || DEFAULT_CONFIG.endpoint,
+    model: activeEndpoint.model || DEFAULT_CONFIG.model,
+    apiKey: activeEndpoint.apiKey || '',
+    temperature: typeof activeEndpoint.temperature === 'number' ? activeEndpoint.temperature : DEFAULT_CONFIG.temperature,
     hudTheme: {
       ...DEFAULT_CONFIG.hudTheme,
       ...(stored.hudTheme || {})

@@ -767,3 +767,83 @@ body.tzv-options-body {
 .tzv-save-status.tzv-show {
   opacity: 1;
 }
+
+/* Endpoint Profiles Grid & Cards */
+.tzv-endpoints-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.tzv-endpoint-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 8px;
+  padding: 10px 12px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+.tzv-endpoint-card:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.tzv-endpoint-card.tzv-editing {
+  border-color: var(--tzv-primary, #6366f1);
+  background: rgba(99, 102, 241, 0.08);
+}
+
+.tzv-endpoint-card.tzv-active {
+  border-color: #38bdf8;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.18);
+}
+
+.tzv-endpoint-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.tzv-endpoint-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--tzv-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tzv-endpoint-badge-active {
+  font-size: 10px;
+  font-weight: 600;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  padding: 1px 5px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.tzv-endpoint-model {
+  font-size: 11px;
+  font-family: monospace;
+  color: var(--tzv-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tzv-endpoint-url {
+  font-size: 10px;
+  color: var(--tzv-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

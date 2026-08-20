@@ -11,13 +11,25 @@ const form = document.getElementById('tzv-options-form');
 const tabButtons = document.querySelectorAll('.tzv-tab-btn');
 const tabPanes = document.querySelectorAll('.tzv-tab-pane');
 
-// Tab 1: AI Service Inputs
+// Tab 1: AI Service Inputs & Profile Manager
+const endpointsGrid = document.getElementById('endpoints-grid');
+const btnAddEndpoint = document.getElementById('btn-add-endpoint');
+const btnActivateSelected = document.getElementById('btn-activate-selected');
+const btnDeleteEndpoint = document.getElementById('btn-delete-endpoint');
+const editorSectionTitle = document.getElementById('editor-section-title');
+
+const endpointNameInput = document.getElementById('endpointName');
 const endpointInput = document.getElementById('endpoint');
 const modelInput = document.getElementById('model');
 const apiKeyInput = document.getElementById('apiKey');
 const temperatureInput = document.getElementById('temperature');
 const btnTestConnection = document.getElementById('btn-test-connection');
 const testStatusSpan = document.getElementById('test-connection-status');
+
+// Local multi-endpoint state
+let endpointsList = [];
+let activeEndpointId = 'ep-local';
+let editingEndpointId = 'ep-local';
 
 // Tab 2: Appearance Inputs & Preview
 const previewWindow = document.getElementById('tzv-preview-window');
@@ -179,6 +191,154 @@ function initTabs() {
 }
 
 /**
+ * Safely escapes HTML strings for DOM rendering
+ */
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+/**
+ * Saves current form inputs into the currently active editing profile in state
+ */
+function saveCurrentEditingEndpointToState() {
+  const current = endpointsList.find((e) => e.id === editingEndpointId);
+  if (current) {
+    current.name = endpointNameInput.value.trim() || 'Untitled Endpoint';
+    current.endpoint = endpointInput.value.trim();
+    current.model = modelInput.value.trim();
+    current.apiKey = apiKeyInput.value.trim();
+    current.temperature = parseFloat(temperatureInput.value) || 0.2;
+  }
+}
+
+/**
+ * Populates the Tab 1 editor form with a selected profile
+ */
+function populateEditorForm(profile) {
+  if (!profile) return;
+  endpointNameInput.value = profile.name || '';
+  endpointInput.value = profile.endpoint || '';
+  modelInput.value = profile.model || '';
+  apiKeyInput.value = profile.apiKey || '';
+  temperatureInput.value = typeof profile.temperature === 'number' ? profile.temperature : 0.2;
+
+  editorSectionTitle.innerText = `Edit: ${profile.name || 'Endpoint Profile'}`;
+
+  // Toggle Activate and Delete buttons
+  if (profile.id === activeEndpointId) {
+    btnActivateSelected.style.display = 'none';
+  } else {
+    btnActivateSelected.style.display = 'inline-block';
+  }
+
+  if (endpointsList.length > 1) {
+    btnDeleteEndpoint.style.display = 'inline-block';
+  } else {
+    btnDeleteEndpoint.style.display = 'none';
+  }
+
+  testStatusSpan.innerText = '';
+}
+
+/**
+ * Renders the endpoint profiles list as interactive cards
+ */
+function renderEndpointsGrid() {
+  if (!endpointsGrid) return;
+  endpointsGrid.innerHTML = '';
+
+  endpointsList.forEach((profile) => {
+    const card = document.createElement('div');
+    card.className = 'tzv-endpoint-card';
+    if (profile.id === editingEndpointId) card.classList.add('tzv-editing');
+    if (profile.id === activeEndpointId) card.classList.add('tzv-active');
+
+    card.innerHTML = `
+      <div class="tzv-endpoint-top">
+        <span class="tzv-endpoint-name" title="${escapeHtml(profile.name)}">${escapeHtml(profile.name)}</span>
+        ${profile.id === activeEndpointId ? '<span class="tzv-endpoint-badge-active">● Active</span>' : ''}
+      </div>
+      <div class="tzv-endpoint-model" title="${escapeHtml(profile.model)}">${escapeHtml(profile.model || 'model unset')}</div>
+      <div class="tzv-endpoint-url" title="${escapeHtml(profile.endpoint)}">${escapeHtml(profile.endpoint || 'url unset')}</div>
+    `;
+
+    card.addEventListener('click', () => {
+      if (editingEndpointId !== profile.id) {
+        saveCurrentEditingEndpointToState();
+        editingEndpointId = profile.id;
+        populateEditorForm(profile);
+        renderEndpointsGrid();
+      }
+    });
+
+    endpointsGrid.appendChild(card);
+  });
+}
+
+/**
+ * Adds a new endpoint profile and selects it for editing
+ */
+function handleAddEndpoint() {
+  saveCurrentEditingEndpointToState();
+
+  const newId = `ep-${Date.now()}`;
+  const newProfile = {
+    id: newId,
+    name: `Custom Endpoint ${endpointsList.length + 1}`,
+    endpoint: 'http://127.0.0.1:11434/v1',
+    model: 'qwen2.5-vl',
+    apiKey: '',
+    temperature: 0.2
+  };
+
+  endpointsList.push(newProfile);
+  editingEndpointId = newId;
+  populateEditorForm(newProfile);
+  renderEndpointsGrid();
+  endpointNameInput.focus();
+}
+
+/**
+ * Deletes the currently selected endpoint profile
+ */
+function handleDeleteEndpoint() {
+  if (endpointsList.length <= 1) {
+    alert('At least one AI endpoint profile must be maintained.');
+    return;
+  }
+
+  const profileToDelete = endpointsList.find((e) => e.id === editingEndpointId);
+  const name = profileToDelete?.name || 'this endpoint';
+  if (!confirm(`Are you sure you want to delete "${name}"?`)) {
+    return;
+  }
+
+  endpointsList = endpointsList.filter((e) => e.id !== editingEndpointId);
+  if (activeEndpointId === editingEndpointId) {
+    activeEndpointId = endpointsList[0].id;
+  }
+  editingEndpointId = endpointsList[0].id;
+  populateEditorForm(endpointsList[0]);
+  renderEndpointsGrid();
+}
+
+/**
+ * Activates the currently edited profile
+ */
+function handleActivateSelected() {
+  saveCurrentEditingEndpointToState();
+  activeEndpointId = editingEndpointId;
+  populateEditorForm(endpointsList.find((e) => e.id === editingEndpointId));
+  renderEndpointsGrid();
+}
+
+/**
  * Loads and populates options form from storage
  */
 async function loadStoredOptions() {
@@ -193,11 +353,18 @@ async function loadStoredOptions() {
       }
     };
 
-    // Tab 1: AI Service
-    endpointInput.value = config.endpoint || DEFAULT_CONFIG.endpoint;
-    modelInput.value = config.model || DEFAULT_CONFIG.model;
-    apiKeyInput.value = config.apiKey || '';
-    temperatureInput.value = typeof config.temperature === 'number' ? config.temperature : DEFAULT_CONFIG.temperature;
+    // Tab 1: AI Service Profiles
+    let loadedEndpoints = config.endpoints;
+    if (!Array.isArray(loadedEndpoints) || loadedEndpoints.length === 0) {
+      loadedEndpoints = DEFAULT_CONFIG.endpoints;
+    }
+    endpointsList = JSON.parse(JSON.stringify(loadedEndpoints));
+    activeEndpointId = config.activeEndpointId || endpointsList[0]?.id || 'ep-local';
+    editingEndpointId = activeEndpointId;
+
+    const currentProfile = endpointsList.find((e) => e.id === editingEndpointId) || endpointsList[0];
+    populateEditorForm(currentProfile);
+    renderEndpointsGrid();
 
     // Tab 2: Appearance & Theme
     const theme = config.hudTheme || DEFAULT_CONFIG.hudTheme;
@@ -243,14 +410,20 @@ async function loadStoredOptions() {
 async function handleSaveOptions(e) {
   e.preventDefault();
 
+  saveCurrentEditingEndpointToState();
+
   const selectedMode = form.querySelector('input[name="learningMode"]:checked')?.value || 'bilingual';
   const selectedEffect = form.querySelector('input[name="hudEffect"]:checked')?.value || 'translucent';
+  const activeProfile = endpointsList.find((e) => e.id === activeEndpointId) || endpointsList[0];
 
   const updatedConfig = {
-    endpoint: endpointInput.value.trim() || DEFAULT_CONFIG.endpoint,
-    model: modelInput.value.trim() || DEFAULT_CONFIG.model,
-    apiKey: apiKeyInput.value.trim(),
-    temperature: parseFloat(temperatureInput.value) || DEFAULT_CONFIG.temperature,
+    endpoints: endpointsList,
+    activeEndpointId: activeEndpointId,
+    // Active resolved credentials for fallback compatibility
+    endpoint: activeProfile?.endpoint || DEFAULT_CONFIG.endpoint,
+    model: activeProfile?.model || DEFAULT_CONFIG.model,
+    apiKey: activeProfile?.apiKey || '',
+    temperature: typeof activeProfile?.temperature === 'number' ? activeProfile.temperature : DEFAULT_CONFIG.temperature,
     targetLanguage: targetLanguageSelect.value,
     learningMode: selectedMode,
     hudTheme: {
@@ -272,6 +445,7 @@ async function handleSaveOptions(e) {
     await chrome.storage.local.set(updatedConfig);
     saveStatusMsg.innerText = '✓ Settings saved successfully!';
     saveStatusMsg.classList.add('tzv-show');
+    renderEndpointsGrid();
     setTimeout(() => {
       saveStatusMsg.classList.remove('tzv-show');
     }, 2500);
@@ -349,15 +523,33 @@ async function handleResetDefaults() {
   input.addEventListener('change', updateLivePreview);
 });
 
+// Live endpoint card label synchronization
+[endpointNameInput, modelInput, endpointInput].forEach((input) => {
+  input.addEventListener('input', () => {
+    const current = endpointsList.find((e) => e.id === editingEndpointId);
+    if (current) {
+      current.name = endpointNameInput.value.trim() || 'Untitled';
+      current.endpoint = endpointInput.value.trim();
+      current.model = modelInput.value.trim();
+      editorSectionTitle.innerText = `Edit: ${current.name}`;
+      renderEndpointsGrid();
+    }
+  });
+});
+
 form.querySelectorAll('input[name="hudEffect"], input[name="learningMode"]').forEach((radio) => {
   radio.addEventListener('change', updateLivePreview);
 });
 
 // Event Listeners
 form.addEventListener('submit', handleSaveOptions);
+btnAddEndpoint.addEventListener('click', handleAddEndpoint);
+btnActivateSelected.addEventListener('click', handleActivateSelected);
+btnDeleteEndpoint.addEventListener('click', handleDeleteEndpoint);
 btnTestConnection.addEventListener('click', handleTestConnection);
 btnResetDefaults.addEventListener('click', handleResetDefaults);
 
 // Initialize
 initTabs();
 document.addEventListener('DOMContentLoaded', loadStoredOptions);
+

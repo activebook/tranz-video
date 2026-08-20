@@ -38,39 +38,76 @@
     <form id="tzv-options-form">
       <!-- TAB 1: AI Service -->
       <div class="tzv-tab-pane tzv-tab-active" id="tab-pane-ai">
+        <!-- Endpoint Profiles Selector -->
         <section class="tzv-section">
-          <h2 class="tzv-section-title">
-            <span>⚡</span>
-            <span>AI Service Endpoint (OpenAI-Compatible)</span>
-          </h2>
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+            <h2 class="tzv-section-title" style="margin-bottom: 0;">
+              <span>⚡</span>
+              <span>AI Service Profiles</span>
+            </h2>
+            <button type="button" class="tzv-btn-secondary" id="btn-add-endpoint" style="padding: 5px 12px; font-size: 12px;">
+              <span>+ Add Endpoint</span>
+            </button>
+          </div>
+
+          <div class="tzv-endpoints-grid" id="endpoints-grid">
+            <!-- Dynamically rendered endpoint profile cards -->
+          </div>
+        </section>
+
+        <!-- Selected Profile Configuration -->
+        <section class="tzv-section" id="endpoint-editor-section">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+            <h2 class="tzv-section-title" style="margin-bottom: 0;">
+              <span>🛠️</span>
+              <span id="editor-section-title">Edit Endpoint Profile</span>
+            </h2>
+            <div style="display: flex; gap: 8px;">
+              <button type="button" class="tzv-btn-secondary" id="btn-activate-selected" style="display: none; padding: 4px 10px; font-size: 11.5px; color: #38bdf8; border-color: rgba(56, 189, 248, 0.4);">
+                <span>✓ Set as Active</span>
+              </button>
+              <button type="button" class="tzv-btn-secondary" id="btn-delete-endpoint" style="display: none; padding: 4px 10px; font-size: 11.5px; color: #f87171; border-color: rgba(239, 68, 68, 0.3);">
+                <span>Delete Profile</span>
+              </button>
+            </div>
+          </div>
 
           <div class="tzv-grid-2">
+            <div class="tzv-form-group">
+              <label class="tzv-form-label" for="endpointName">Profile Display Name</label>
+              <input class="tzv-input" type="text" id="endpointName" name="endpointName" placeholder="e.g. Local Ollama (Qwen)" required>
+            </div>
+
             <div class="tzv-form-group">
               <label class="tzv-form-label" for="endpoint">API Base URL</label>
               <input class="tzv-input" type="text" id="endpoint" name="endpoint" placeholder="http://127.0.0.1:8045/v1" required>
             </div>
+          </div>
 
+          <div class="tzv-grid-2">
             <div class="tzv-form-group">
               <label class="tzv-form-label" for="model">Model Identifier</label>
-              <input class="tzv-input" type="text" id="model" name="model" placeholder="gemini-2.5-flash-lite" required>
+              <input class="tzv-input" type="text" id="model" name="model" placeholder="gemini-3.1-flash-lite" required>
+            </div>
+
+            <div class="tzv-form-group">
+              <label class="tzv-form-label" for="apiKey">API Key (Optional for local gateway)</label>
+              <input class="tzv-input" type="password" id="apiKey" name="apiKey" placeholder="sk-...">
             </div>
           </div>
 
           <div class="tzv-grid-2">
             <div class="tzv-form-group">
-              <label class="tzv-form-label" for="apiKey">API Key (Optional for local gateway)</label>
-              <input class="tzv-input" type="password" id="apiKey" name="apiKey" placeholder="sk-...">
-            </div>
-
-            <div class="tzv-form-group">
               <label class="tzv-form-label" for="temperature">Temperature (0.0 - 1.0)</label>
               <input class="tzv-input" type="number" id="temperature" name="temperature" min="0" max="1" step="0.05" value="0.2">
             </div>
-          </div>
 
-          <div class="tzv-test-row">
-            <button type="button" class="tzv-btn-secondary" id="btn-test-connection">Test API Connection</button>
-            <span id="test-connection-status" class="tzv-test-status"></span>
+            <div class="tzv-form-group" style="display: flex; flex-direction: column; justify-content: flex-end;">
+              <div class="tzv-test-row">
+                <button type="button" class="tzv-btn-secondary" id="btn-test-connection" style="white-space: nowrap;">Test API Connection</button>
+                <span id="test-connection-status" class="tzv-test-status"></span>
+              </div>
+            </div>
           </div>
         </section>
       </div>
